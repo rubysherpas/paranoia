@@ -8,8 +8,8 @@ Gem::Specification.new do |s|
   s.authors     = []
   s.email       = []
   s.homepage    = "http://rubygems.org/gems/paranoia"
-  s.summary     = "TODO: Write a gem summary"
-  s.description = "TODO: Write a gem description"
+  s.summary     = "acts_as_paranoid, without the clusterfuck"
+  s.description = "acts_as_paranoid, without the clusterfuck"
 
   s.required_rubygems_version = ">= 1.3.6"
   s.rubyforge_project         = "paranoia"
