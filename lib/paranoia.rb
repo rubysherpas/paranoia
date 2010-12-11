@@ -1,16 +1,15 @@
 module Paranoia
-  def deleted?
-    !!self["deleted_at"]
-  end
-  
   def destroy
-    self["deleted_at"] = Time.now
+    self[:deleted_at] ||= Time.now
     self.save
     _run_destroy_callbacks
   end
-  
-  alias_method :delete, :destroy
-    
+  alias :delete :destroy
+
+  def destroyed?
+    !self[:deleted_at].nil?
+  end
+  alias :deleted? :destroyed?
 end
 
 class ActiveRecord::Base
@@ -19,4 +18,3 @@ class ActiveRecord::Base
     default_scope :conditions => { :deleted_at => nil }
   end
 end
-  
