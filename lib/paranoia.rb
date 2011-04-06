@@ -1,8 +1,8 @@
 module Paranoia
   def destroy
-    self[:deleted_at] ||= Time.now
-    self.save
     _run_destroy_callbacks
+    self[:deleted_at] ||= Time.now
+    self.save    
   end
   alias :delete :destroy
 
