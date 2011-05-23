@@ -11,6 +11,7 @@ module Paranoia
     _run_destroy_callbacks
     self[:deleted_at] ||= Time.now
     self.save(:validate => false)
+    self.freeze
   end
   alias :delete :destroy
 
