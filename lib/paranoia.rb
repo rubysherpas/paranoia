@@ -10,7 +10,7 @@ module Paranoia
   def destroy
     _run_destroy_callbacks
     self[:deleted_at] ||= Time.now
-    self.save    
+    self.save(:validate => false)
   end
   alias :delete :destroy
 
