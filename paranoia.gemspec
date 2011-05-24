@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   s.rubyforge_project         = "paranoia"
   
   s.add_dependency "activerecord", ">= 3.0.0"
-  #s.add_dependency "activerecord", ">= 3.1.0.rc1"
 
   s.add_development_dependency "bundler", ">= 1.0.0"
   s.add_development_dependency "sqlite3"
