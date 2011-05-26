@@ -6,7 +6,13 @@ You would use either plugin / gem if you wished that when you called `destroy` o
 
 ## Installation & Usage
 
-### Initial installation
+Put this in your Gemfile:
+
+    gem 'paranoia'
+
+Then run `bundle`. Done.
+
+Updating is as simple as `bundle update paranoia`.
 
 #### Rails 3
 
