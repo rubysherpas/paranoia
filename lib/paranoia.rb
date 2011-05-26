@@ -10,6 +10,7 @@ module Paranoia
   def destroy
     _run_destroy_callbacks
     self.update_attribute(:deleted_at, Time.now) if !deleted? && persisted?
+    freeze
   end
   alias :delete :destroy
 
