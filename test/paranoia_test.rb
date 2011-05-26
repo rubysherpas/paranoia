@@ -71,6 +71,14 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 1, model.class.unscoped.count
   end
 
+  def test_find_with_deleted_for_paranoid_models
+    model = ParanoidModel.new
+    model.save
+    model.delete
+
+    assert_equal model, ParanoidModel.find_with_deleted.last
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")

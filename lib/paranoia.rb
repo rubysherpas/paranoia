@@ -26,6 +26,10 @@ class ActiveRecord::Base
     default_scope :conditions => { :deleted_at => nil }
   end
 
+  def self.find_with_deleted
+    unscoped 
+  end
+
   def self.paranoid? ; false ; end
   def paranoid? ; self.class.paranoid? ; end
 end
