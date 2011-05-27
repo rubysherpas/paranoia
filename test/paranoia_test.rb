@@ -38,7 +38,7 @@ class ParanoiaTest < Test::Unit::TestCase
 
     assert_equal true, model.deleted_at.nil?
     assert model.frozen?
-    
+
     assert_equal 0, model.class.count
     assert_equal 0, model.class.unscoped.count
   end
@@ -66,9 +66,20 @@ class ParanoiaTest < Test::Unit::TestCase
     model.delete
 
     assert_equal false, model.deleted_at.nil?
-    
+
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
+  end
+
+  def test_only_deleted_scope_for_paranoid_models
+    model = ParanoidModel.new
+    model.save
+    model.delete
+    model2 = ParanoidModel.new
+    model2.save
+
+    assert_equal model, ParanoidModel.only_deleted.last
+    assert_equal false, ParanoidModel.only_deleted.include?(model2)
   end
 
   private
