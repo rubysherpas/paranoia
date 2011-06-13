@@ -103,9 +103,6 @@ class ParanoiaTest < Test::Unit::TestCase
     id = model.id
     model.destroy
     
-    puts model.inspect
-    puts ParanoidModel.all.inspect
-    
     assert model.destroyed?
     
     model = ParanoidModel.only_deleted.find(id)
