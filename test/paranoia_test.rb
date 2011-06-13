@@ -113,6 +113,22 @@ class ParanoiaTest < Test::Unit::TestCase
     
     assert_equal false, model.destroyed?
   end
+  
+  def test_real_destroy
+    model = ParanoidModel.new
+    model.save
+    model.destroy!
+    
+    assert_equal false, ParanoidModel.unscoped.exists?(model.id)
+  end
+  
+  def test_real_delete
+    model = ParanoidModel.new
+    model.save
+    model.delete!
+    
+    assert_equal false, ParanoidModel.unscoped.exists?(model.id)
+  end
 
   private
   def get_featureful_model
