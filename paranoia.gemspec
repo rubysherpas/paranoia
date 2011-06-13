@@ -5,7 +5,7 @@ Gem::Specification.new do |s|
   s.name        = "paranoia"
   s.version     = Paranoia::VERSION
   s.platform    = Gem::Platform::RUBY
-  s.authors     = []
+  s.authors     = ["radarlistener@gmail.com"]
   s.email       = []
   s.homepage    = "http://rubygems.org/gems/paranoia"
   s.summary     = "acts_as_paranoid, without the clusterfuck"
