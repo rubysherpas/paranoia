@@ -1,6 +1,9 @@
 module Paranoia
   def self.included(klazz)
     klazz.extend Query
+    class << klazz
+      alias_method :with_deleted, :unscoped
+    end
   end
 
   module Query
@@ -11,8 +14,6 @@ module Paranoia
         where("deleted_at is not null")
       }
     end
-    
-    alias :with_deleted :unscoped
   end
 
   def destroy

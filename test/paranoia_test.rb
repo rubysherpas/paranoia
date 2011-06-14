@@ -126,6 +126,13 @@ class ParanoiaTest < Test::Unit::TestCase
     
     assert_equal false, ParanoidModel.unscoped.exists?(model.id)
   end
+  
+  def test_with_deleted
+    model1, model2 = ParanoidModel.create, ParanoidModel.create
+    model1.delete
+    assert ParanoidModel.with_deleted.exists?(model1.id)
+    assert ParanoidModel.with_deleted.exists?(model2.id)
+  end
 
   private
   def get_featureful_model
