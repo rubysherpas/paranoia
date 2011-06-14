@@ -11,6 +11,8 @@ module Paranoia
         where("deleted_at is not null")
       }
     end
+    
+    alias :with_deleted :unscoped
   end
 
   def destroy
