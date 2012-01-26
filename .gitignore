@@ -1,3 +1,5 @@
 pkg/*
 *.gem
 .bundle
+tmp
+.rvmrc

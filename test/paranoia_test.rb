@@ -30,6 +30,17 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal true, ParanoidModel.new.paranoid?
   end
 
+  def test_paranoid_models_to_param
+    model = ParanoidModel.new
+    model.save
+    to_param = model.to_param
+
+    model.destroy
+
+    assert_not_equal nil, model.to_param
+    assert_equal to_param, model.to_param
+  end
+
   def test_destroy_behavior_for_plain_models
     model = PlainModel.new
     assert_equal 0, model.class.count
