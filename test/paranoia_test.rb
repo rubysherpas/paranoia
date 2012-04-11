@@ -123,7 +123,6 @@ class ParanoiaTest < Test::Unit::TestCase
   end
   
   def test_real_destroy
-    puts "Rails.version: #{ActiveRecord::VERSION::STRING}"
     model = ParanoidModel.new
     model.save
     model.destroy!
