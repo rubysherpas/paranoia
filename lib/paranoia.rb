@@ -14,22 +14,32 @@ module Paranoia
   end
 
   def destroy
-    _run_destroy_callbacks { delete }
+    run_callbacks(:destroy) { delete }
   end
 
   def delete    
-    self.update_attribute(:deleted_at, Time.now) if !deleted? && persisted?
+    if persisted?
+      self.deleted_at = Time.now
+      self.class.update_all({ :deleted_at => deleted_at }, self.class.primary_key => id)
+    end
+
+    @destroyed = true
     freeze
   end
   
   def restore!
-    update_attribute :deleted_at, nil
+    if persisted?
+      self.deleted_at = nil
+      self.class.update_all({ :deleted_at => deleted_at }, self.class.primary_key => id)
+    end
   end
 
-  def destroyed?
+  # Has this record been marked as deleted? 
+  # This serves a different purpose than ActiveRecord#destroyed?, which checks 
+  # if the record in memory has been marked as destroyed.
+  def deleted?
     !self.deleted_at.nil?
   end
-  alias :deleted? :destroyed?
 end
 
 class ActiveRecord::Base
@@ -42,11 +52,4 @@ class ActiveRecord::Base
 
   def self.paranoid? ; false ; end
   def paranoid? ; self.class.paranoid? ; end
-
-  # Override the persisted method to allow for the paranoia gem.
-  # If a paranoid record is selected, then we only want to check
-  # if it's a new record, not if it is "destroyed".
-  def persisted?
-    paranoid? ? !new_record? : super
-  end
 end
