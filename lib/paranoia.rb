@@ -14,16 +14,24 @@ module Paranoia
   end
 
   def destroy
-    _run_destroy_callbacks { delete }
+    run_callbacks(:destroy) { delete }
   end
 
   def delete    
-    self.update_attribute(:deleted_at, Time.now) if !deleted? && persisted?
+    if persisted?
+      self.deleted_at = Time.now
+      self.class.update_all({ :deleted_at => deleted_at }, self.class.primary_key => id)
+    end
+
+    @destroyed = true
     freeze
   end
   
   def restore!
-    update_attribute :deleted_at, nil
+    if persisted?
+      self.deleted_at = nil
+      self.class.update_all({ :deleted_at => deleted_at }, self.class.primary_key => id)
+    end
   end
 
   def destroyed?

@@ -49,7 +49,9 @@ class ParanoiaTest < Test::Unit::TestCase
     model.destroy
 
     assert_equal true, model.deleted_at.nil?
+    assert model.destroyed?
     assert model.frozen?
+    assert !model.respond_to?(:deleted?)
 
     assert_equal 0, model.class.count
     assert_equal 0, model.class.unscoped.count
@@ -63,7 +65,9 @@ class ParanoiaTest < Test::Unit::TestCase
     model.destroy
 
     assert_equal false, model.deleted_at.nil?
+    assert model.destroyed?
     assert model.frozen?
+    assert model.deleted?
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
@@ -78,6 +82,9 @@ class ParanoiaTest < Test::Unit::TestCase
     model.destroy
 
     assert_equal false, model.deleted_at.nil?
+    assert model.destroyed?
+    assert model.frozen?
+    assert model.deleted?
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
@@ -98,14 +105,16 @@ class ParanoiaTest < Test::Unit::TestCase
     model = CallbackModel.new
     model.save
     model.delete
-    assert_equal nil, model.instance_variable_get(:@callback_called)
+    assert_equal nil, model.instance_variable_get(:@before_update_callback_called)
+    assert_equal nil, model.instance_variable_get(:@before_destroy_callback_called)
   end
   
   def test_destroy_behavior_for_callbacks
     model = CallbackModel.new
     model.save
     model.destroy
-    assert model.instance_variable_get(:@callback_called)
+    assert_equal nil, model.instance_variable_get(:@before_update_callback_called)
+    assert model.instance_variable_get(:@before_destroy_callback_called)
   end
   
   def test_restore
@@ -114,11 +123,13 @@ class ParanoiaTest < Test::Unit::TestCase
     id = model.id
     model.destroy
     
+    assert model.deleted?
     assert model.destroyed?
     
     model = ParanoidModel.only_deleted.find(id)
     model.restore!
     
+    assert_equal false, model.deleted?
     assert_equal false, model.destroyed?
   end
   
@@ -160,5 +171,10 @@ end
 
 class CallbackModel < ActiveRecord::Base
   acts_as_paranoid
-  before_destroy {|model| model.instance_variable_set :@callback_called, true }
+  before_update do |model| 
+    model.instance_variable_set :@before_update_callback_called, true
+  end
+  before_destroy do |model|
+    model.instance_variable_set :@before_destroy_callback_called, true
+  end
 end
