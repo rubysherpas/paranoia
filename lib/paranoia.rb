@@ -34,12 +34,10 @@ module Paranoia
     end
   end
 
-  # Has this record been marked as deleted? 
-  # This serves a different purpose than ActiveRecord#destroyed?, which checks 
-  # if the record in memory has been marked as destroyed.
-  def deleted?
+  def destroyed?
     !self.deleted_at.nil?
   end
+  alias :deleted? :destroyed?
 end
 
 class ActiveRecord::Base
@@ -52,4 +50,11 @@ class ActiveRecord::Base
 
   def self.paranoid? ; false ; end
   def paranoid? ; self.class.paranoid? ; end
+
+  # Override the persisted method to allow for the paranoia gem.
+  # If a paranoid record is selected, then we only want to check
+  # if it's a new record, not if it is "destroyed".
+  def persisted?
+    paranoid? ? !new_record? : super
+  end
 end
