@@ -8,7 +8,7 @@ module Paranoia
 
     def only_deleted
       unscoped {
-        where("deleted_at is not null")
+        where("#{self.table_name}.deleted_at is not null")
       }
     end
   end
