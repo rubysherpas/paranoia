@@ -99,6 +99,12 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 1, model.class.unscoped.count
   end
 
+  # Regression test for #24
+  def test_chaining_for_paranoid_models
+    scope = FeaturefulModel.where(:name => "foo").only_deleted
+    scope.where_values.count.should == 2
+  end
+
   def test_only_destroyed_scope_for_paranoid_models
     model = ParanoidModel.new
     model.save
