@@ -109,7 +109,7 @@ Paranoia also provides new dependent options for associations:
 # If you want to hard-delete paranoid dependencies, you can use:
 has_one :widget, dependent: :destroy! # fires callbacks, hard-deletes
 has_one :widget, dependent: :delete! # no callbacks, hard-deletes
-has_many :widgets, dependent: :destroy! # fires callbacks for all objects
+has_many :widgets, dependent: :destroy! # fires callbacks for all objects, hard-deletes
 # has_many :widgets, dependent: :delete_all is unchanged, hard-deletes w/o callbacks
 ```
 
