@@ -17,6 +17,8 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER N
 ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE supportive_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, type STRING)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE dependent_models (id INTEGER NOT NULL PRIMARY KEY, supportive_model_id INTEGER, supportive_model_with_delete_id INTEGER, very_supportive_model_id INTEGER, deleted_at DATETIME)'
 
 class ParanoiaTest < Test::Unit::TestCase
   def test_plain_model_class_is_not_paranoid
@@ -73,7 +75,7 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
   end
-  
+
   def test_scoping_behavior_for_paranoid_models
     ParanoidModel.unscoped.delete_all
     parent1 = ParentModel.create
@@ -205,7 +207,48 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal false, ParanoidModel.unscoped.exists?(model.id)
   end
 
+  def test_dependent_destroy!
+    parent = SupportiveModel.create
+    child = DependentModel.new
+    child.supportive_model = parent
+    child.save
+
+    parent.destroy
+    assert_equal true, DependentModel.callbacks[child.id]
+    assert_equal false, DependentModel.unscoped.exists?(child.id)
+  end
+
+  def test_dependent_delete!
+    parent = SupportiveModelWithDelete.create
+    child = DependentModel.new
+    child.supportive_model_with_delete = parent
+    child.save
+    assert_equal child.reload.supportive_model_with_delete, parent
+
+    parent.destroy
+    assert_equal nil, DependentModel.callbacks[child.id]
+    assert_equal false, DependentModel.unscoped.exists?(child.id)
+  end
+
+  def test_has_many_dependent_destroy!
+    parent = VerySupportiveModel.create
+    children = 2.times.map do
+      DependentModel.new.tap do |child|
+        child.very_supportive_model = parent
+        child.save
+        assert_equal child.reload.very_supportive_model, parent
+      end
+    end
+
+    parent.destroy
+    children.each do |c|
+      assert_equal true, DependentModel.callbacks[c.id]
+      assert_equal false, DependentModel.unscoped.exists?(c.id)
+    end
+  end
+
   private
+
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
   end
@@ -261,4 +304,35 @@ class Job < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :employer
   belongs_to :employee
+end
+
+class SupportiveModel < ActiveRecord::Base
+  acts_as_paranoid
+  has_one :dependent_model, dependent: :destroy!
+end
+
+class SupportiveModelWithDelete < SupportiveModel
+  acts_as_paranoid
+  has_one :dependent_model, dependent: :delete!
+end
+
+class VerySupportiveModel < SupportiveModel
+  acts_as_paranoid
+  has_many :dependent_model, dependent: :destroy!
+end
+
+class DependentModel < ActiveRecord::Base
+  # we can't always access the model afterward, so we need to make callbacks
+  # accessible
+  class << self
+    attr_accessor :callbacks
+  end
+  @callbacks = {}
+
+  acts_as_paranoid
+  belongs_to :supportive_model
+  belongs_to :supportive_model_with_delete
+  belongs_to :very_supportive_model
+
+  before_destroy {|model| DependentModel.callbacks[model.id] = true }
 end

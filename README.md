@@ -57,7 +57,7 @@ class AddDeletedAtToClient < ActiveRecord::Migration
   end
 end
 ```
-    
+
 ### Usage
 
 #### In your model:
@@ -98,6 +98,19 @@ find_with_deleted(id)         # => with_deleted.find(id)
 find_only_deleted(:all)       # => only_deleted
 find_only_deleted(:first)     # => only_deleted.first
 find_only_deleted(id)         # => only_deleted.find(id)
+```
+
+Paranoia also provides new dependent options for associations:
+
+```ruby
+
+# By default, associations with `dependent: :destroy` or `dependent: :delete`
+# will soft-delete associated records (with or without callbacks, respectively).
+# If you want to hard-delete paranoid dependencies, you can use:
+has_one :widget, dependent: :destroy! # fires callbacks, hard-deletes
+has_one :widget, dependent: :delete! # no callbacks, hard-deletes
+has_many :widgets, dependent: :destroy! # fires callbacks for all objects
+# has_many :widgets, dependent: :delete_all is unchanged, hard-deletes w/o callbacks
 ```
 
 ## License
