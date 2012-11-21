@@ -113,6 +113,11 @@ has_many :widgets, dependent: :destroy! # fires callbacks for all objects, hard-
 # has_many :widgets, dependent: :delete_all is unchanged, hard-deletes w/o callbacks
 ```
 
+Note that hard-deletion doesn't cascade -- if your User class `has_many
+widgets, dependent: destroy!` and Widget `has_many components, dependent:
+destroy`, the latter will be soft-deleted when the User is destroyed.  In this
+case, you should add a `:through` relationship to in the original object.
+
 ## License
 
 This gem is released under the MIT license.
