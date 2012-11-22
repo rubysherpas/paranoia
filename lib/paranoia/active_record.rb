@@ -93,7 +93,7 @@ module ActiveRecord
     def hard_remove_relations
       self.class.hard_destroy_relations.each do |name|
         if reflections[name].macro == :has_many
-          self.send(name).find_in_batches {|batch| batch.each(&:destroy!)}
+          self.send(name).map(&:destroy!)
         elsif object = self.send(name)
           object.destroy!
         end
