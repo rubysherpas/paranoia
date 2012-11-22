@@ -63,8 +63,7 @@ module ActiveRecord
         name = name.to_sym
         key, details = self.reflections.detect {|k, v| k == name}
         if key
-          type = details.macro
-          if [:has_many, :belongs_to, :has_one].include?(type)
+          if [:has_many, :belongs_to, :has_one].include?(details.macro)
             if action == :destroy!
               hard_destroy_relations << name
             elsif action == :delete!
