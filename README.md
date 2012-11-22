@@ -100,23 +100,32 @@ find_only_deleted(:first)     # => only_deleted.first
 find_only_deleted(id)         # => only_deleted.find(id)
 ```
 
-Paranoia also provides new dependent options for associations:
+Paranoia also provides a mechanism for cascading hard-deletes to paranoid
+resources -- for instance, if you want to hard-delete users and all associated
+resources when they delete their account:
 
 ```ruby
-
 # By default, associations with `dependent: :destroy` or `dependent: :delete`
 # will soft-delete associated records (with or without callbacks, respectively).
-# If you want to hard-delete paranoid dependencies, you can use:
-has_one :widget, dependent: :destroy! # fires callbacks, hard-deletes
-has_one :widget, dependent: :delete! # no callbacks, hard-deletes
-has_many :widgets, dependent: :destroy! # fires callbacks for all objects, hard-deletes
-# has_many :widgets, dependent: :delete_all is unchanged, hard-deletes w/o callbacks
+# If you want to hard-delete paranoid dependencies, don't use AR's dependent
+# option; instead, use these methods:
+hard_destroy_dependencies :widgets, :operator # hard-destroys with callbacks
+hard_delete_dependencies :widgets # hard-deletes dependencies
+# Both methods can take any mixture of :has_many, :has_one, and :belongs_to.
 ```
 
-Note that hard-deletion doesn't cascade -- if your User class `has_many
-widgets, dependent: destroy!` and Widget `has_many components, dependent:
-destroy`, the latter will be soft-deleted when the User is destroyed.  In this
-case, you should add a `:through` relationship to in the original object.
+Note that unlike ActiveRecord's built-in dependency management, this will only
+fire when objects are destroyed, not deleted, since it works via an
+after_destroy callback.  (Make sure to register any callbacks that depend on
+children before the hard_destroy_dependencies.)
+
+Also note that hard-destroys will trigger callbacks on child objects, but
+hard-deletions won't (just like AR).  That said, if you hard-delete a paranoid object that has
+a traditional `dependent: destroy` relationship with its own child, the
+grandchild will be soft-deleted (if paranoid).  In this case, you should add a
+`:through` relationship to the grandchild in the original object, and add it to
+the hard-remove.  (The order of deletions and hence of callbacks being executed
+depends on the order you define them.)
 
 ## License
 

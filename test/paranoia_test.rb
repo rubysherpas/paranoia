@@ -308,17 +308,22 @@ end
 
 class SupportiveModel < ActiveRecord::Base
   acts_as_paranoid
-  has_one :dependent_model, dependent: :destroy!
+  has_one :dependent_model
+  hard_destroy_dependencies :dependent_model
 end
 
 class SupportiveModelWithDelete < SupportiveModel
   acts_as_paranoid
-  has_one :dependent_model, dependent: :delete!
+  has_one :dependent_model
+
+  hard_delete_dependencies :dependent_model
 end
 
 class VerySupportiveModel < SupportiveModel
   acts_as_paranoid
-  has_many :dependent_model, dependent: :destroy!
+  has_many :dependent_model
+
+  hard_destroy_dependencies :dependent_model
 end
 
 class DependentModel < ActiveRecord::Base
