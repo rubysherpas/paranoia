@@ -185,6 +185,7 @@ class ParanoiaTest < Test::Unit::TestCase
 
     model = ParanoidModel.only_deleted.find(id)
     model.restore!
+    model.reload
 
     assert_equal false, model.destroyed?
   end
