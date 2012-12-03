@@ -38,7 +38,7 @@ module ActiveRecord
       @_hard_destroy_relations ||= []
     end
 
-    # Internal: Relations that have been marked for hard-destroy (with callbacks).
+    # Internal: Relations that have been marked for hard-delete (without callbacks).
     def self.hard_delete_relations
       @_hard_delete_relations ||= []
     end
@@ -93,6 +93,7 @@ module ActiveRecord
     def hard_remove_relations
       self.class.hard_destroy_relations.each do |name|
         if reflections[name].macro == :has_many
+          puts "Destroying #{self.send(name).to_a.inspect}"
           self.send(name).map(&:destroy!)
         elsif object = self.send(name)
           object.destroy!
