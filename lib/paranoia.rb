@@ -43,8 +43,8 @@ end
 
 class ActiveRecord::Base
   def self.acts_as_paranoid
-    alias_method :destroy!, :destroy
-    alias_method :delete!,  :delete
+    alias :destroy! :destroy
+    alias :delete!  :delete
     include Paranoia
     default_scope :conditions => { :deleted_at => nil }
   end
