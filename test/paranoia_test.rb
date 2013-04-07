@@ -54,7 +54,6 @@ class ParanoiaTest < Test::Unit::TestCase
     model.destroy
 
     assert_equal true, model.deleted_at.nil?
-    assert model.frozen?
 
     assert_equal 0, model.class.count
     assert_equal 0, model.class.unscoped.count
@@ -68,7 +67,6 @@ class ParanoiaTest < Test::Unit::TestCase
     model.destroy
 
     assert_equal false, model.deleted_at.nil?
-    assert model.frozen?
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
