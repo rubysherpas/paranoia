@@ -91,7 +91,7 @@ end
 You can replace the older acts_as_paranoid methods as follows:
 
 | Old Syntax                 | New Syntax                     |
-| -------------------------- | ------------------------------ |
+|:-------------------------- |:------------------------------ |
 |`find_with_deleted(:all)`   | `Client.with_deleted`          |
 |`find_with_deleted(:first)` | `Client.with_deleted.first`    |
 |`find_with_deleted(id)`     | `Client.with_deleted.find(id)` |
