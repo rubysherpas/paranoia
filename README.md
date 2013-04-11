@@ -90,15 +90,11 @@ end
 
 You can replace the older acts_as_paranoid methods as follows:
 
-```ruby
-find_with_deleted(:all)       # => with_deleted
-find_with_deleted(:first)     # => with_deleted.first
-find_with_deleted(id)         # => with_deleted.find(id)
-
-find_only_deleted(:all)       # => only_deleted
-find_only_deleted(:first)     # => only_deleted.first
-find_only_deleted(id)         # => only_deleted.find(id)
-```
+| Old Syntax                 | New Syntax                     |
+| -------------------------- | ------------------------------ |
+|`find_with_deleted(:all)`   | `Client.with_deleted`          |
+|`find_with_deleted(:first)` | `Client.with_deleted.first`    |
+|`find_with_deleted(id)`     | `Client.with_deleted.find(id)` |
 
 ## License
 
