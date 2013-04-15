@@ -46,18 +46,22 @@ rake gems:install
 
 #### Run your migrations for the desired models
 
-```ruby
-class AddDeletedAtToClient < ActiveRecord::Migration
-  def self.up
-    add_column :clients, :deleted_at, :datetime
-  end
+Run:
 
-  def self.down
-    remove_column :clients, :deleted_at
+```shell
+rails generate migration AddDeletedAtToClients deleted_at:datetime
+```
+
+and now you have a migration
+
+```ruby
+class AddDeletedAtToClients < ActiveRecord::Migration
+  def change
+    add_column :clients, :deleted_at, :datetime
   end
 end
 ```
-    
+
 ### Usage
 
 #### In your model:
