@@ -12,37 +12,13 @@ Put this in your Gemfile:
 gem 'paranoia'
 ```
 
-Then run `bundle`. Done.
-
-Updating is as simple as `bundle update paranoia`.
-
-#### Rails 3
-
-In your _Gemfile_:
-
-```ruby
-gem 'paranoia'
-```
-
 Then run:
 
 ```shell
 bundle install
 ```
 
-#### Rails 2:
-
-In your _config/environment.rb_:
-
-```ruby
-config.gem 'paranoia'
-```
-
-Then run:
-
-```shell
-rake gems:install
-```
+Updating is as simple as `bundle update paranoia`.
 
 #### Run your migrations for the desired models
 
@@ -57,7 +33,7 @@ class AddDeletedAtToClient < ActiveRecord::Migration
   end
 end
 ```
-    
+
 ### Usage
 
 #### In your model:
