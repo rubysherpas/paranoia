@@ -45,7 +45,7 @@ class ActiveRecord::Base
     alias :destroy! :destroy
     alias :delete!  :delete
     include Paranoia
-    default_scope :conditions => { :deleted_at => nil }
+    default_scope { where(:deleted_at => nil) }
   end
 
   def self.paranoid? ; false ; end
