@@ -28,7 +28,7 @@ module Paranoia
   end
 
   def destroyed?
-    !self.deleted_at.nil?
+    !!deleted_at
   end
   alias :deleted? :destroyed?
 
