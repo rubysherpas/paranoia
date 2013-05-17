@@ -193,7 +193,7 @@ class ParanoiaTest < Test::Unit::TestCase
     model.save
     model.destroy!
 
-    assert_equal false, ParanoidModel.unscoped.exists?(model.id)
+    assert !ParanoidModel.unscoped.exists?(model.id)
   end
 
   def test_real_delete
@@ -201,7 +201,7 @@ class ParanoiaTest < Test::Unit::TestCase
     model.save
     model.delete!
 
-    assert_equal false, ParanoidModel.unscoped.exists?(model.id)
+    assert !ParanoidModel.unscoped.exists?(model.id)
   end
 
   private
