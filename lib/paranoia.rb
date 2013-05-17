@@ -6,12 +6,12 @@ module Paranoia
   module Query
     def paranoid? ; true ; end
 
-    def only_deleted
-      scoped.tap { |x| x.default_scoped = false }.where("#{self.table_name}.deleted_at is not null")
-    end
-
     def with_deleted
       scoped.tap { |x| x.default_scoped = false }
+    end
+
+    def only_deleted
+      with_deleted.where("#{self.table_name}.deleted_at IS NOT NULL")
     end
   end
 
