@@ -20,7 +20,7 @@ module Paranoia
   end
 
   def delete
-    return if new_record? || destroyed?
+    return if new_record? or destroyed?
     update_attribute_or_column :deleted_at, Time.now
   end
 
