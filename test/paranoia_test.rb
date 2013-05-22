@@ -8,15 +8,51 @@ FileUtils.mkdir_p File.dirname(DB_FILE)
 FileUtils.rm_f DB_FILE
 
 ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => DB_FILE
-ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
-ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
+
+def create_table(name, &block)
+  ActiveRecord::Base.connection.create_table name, &block
+end
+
+create_table :parent_models do |t|
+  t.column :deleted_at, :datetime
+end
+
+create_table :paranoid_models do |t|
+  t.references :parent_model
+  t.column :deleted_at, :datetime
+end
+
+create_table :featureful_models do |t|
+  t.column :name, :string
+  t.column :deleted_at, :datetime
+end
+
+create_table :plain_models do |t|
+  t.column :deleted_at, :datetime
+end
+
+create_table :callback_models do |t|
+  t.column :deleted_at, :datetime
+end
+
+create_table :related_models do |t|
+  t.references :parent_model
+  t.column :deleted_at, :datetime
+end
+
+create_table :employers do |t|
+  t.column :deleted_at, :datetime
+end
+
+create_table :employees do |t|
+  t.column :deleted_at, :datetime
+end
+
+create_table :jobs do |t|
+  t.references :employer
+  t.references :employee
+  t.column :deleted_at, :datetime
+end
 
 class ParanoiaTest < Test::Unit::TestCase
   def test_plain_model_class_is_not_paranoid
