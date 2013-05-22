@@ -50,7 +50,6 @@ ActiveRecord::Migration.class_exec do
   create_table :jobs do |t|
     t.references :employer
     t.references :employee
-    t.column :deleted_at, :datetime
     t.datetime :deleted_at
   end
 end
@@ -241,7 +240,8 @@ class ParanoiaTest < Test::Unit::TestCase
     assert !ParanoidModel.unscoped.exists?(model.id)
   end
 
-  private
+private
+
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
   end
