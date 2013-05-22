@@ -20,19 +20,19 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PR
 
 class ParanoiaTest < Test::Unit::TestCase
   def test_plain_model_class_is_not_paranoid
-    assert_equal false, PlainModel.paranoid?
+    assert !PlainModel.paranoid?
   end
 
   def test_paranoid_model_class_is_paranoid
-    assert_equal true, ParanoidModel.paranoid?
+    assert ParanoidModel.paranoid?
   end
 
   def test_plain_models_are_not_paranoid
-    assert_equal false, PlainModel.new.paranoid?
+    assert !PlainModel.new.paranoid?
   end
 
   def test_paranoid_models_are_paranoid
-    assert_equal true, ParanoidModel.new.paranoid?
+    assert ParanoidModel.new.paranoid?
   end
 
   def test_paranoid_models_to_param
@@ -53,7 +53,7 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 1, model.class.count
     model.destroy
 
-    assert_equal true, model.deleted_at.nil?
+    assert model.deleted_at.nil?
 
     assert_equal 0, model.class.count
     assert_equal 0, model.class.unscoped.count
@@ -115,7 +115,7 @@ class ParanoiaTest < Test::Unit::TestCase
     model2.save
 
     assert_equal model, ParanoidModel.only_deleted.last
-    assert_equal false, ParanoidModel.only_deleted.include?(model2)
+    assert !ParanoidModel.only_deleted.include?(model2)
   end
 
   def test_default_scope_for_has_many_relationships
@@ -185,7 +185,7 @@ class ParanoiaTest < Test::Unit::TestCase
     model.restore!
     model.reload
 
-    assert_equal false, model.destroyed?
+    assert !model.destroyed?
   end
 
   def test_real_destroy
