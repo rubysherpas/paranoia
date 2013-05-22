@@ -42,7 +42,7 @@ class ParanoiaTest < Test::Unit::TestCase
 
     model.destroy
 
-    assert_not_equal nil, model.to_param
+    assert_not_nil model.to_param
     assert_equal to_param, model.to_param
   end
 
@@ -66,12 +66,12 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 1, model.class.count
     model.destroy
 
-    assert_equal false, model.deleted_at.nil?
+    assert_not_nil model.deleted_at
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
   end
-  
+
   def test_scoping_behavior_for_paranoid_models
     ParanoidModel.unscoped.delete_all
     parent1 = ParentModel.create
@@ -94,7 +94,7 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 1, model.class.count
     model.destroy
 
-    assert_equal false, model.deleted_at.nil?
+    assert_not_nil model.deleted_at
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
@@ -126,7 +126,7 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 1, parent.related_models.count
 
     child.destroy
-    assert_equal false, child.deleted_at.nil?
+    assert_not_nil child.deleted_at
 
     assert_equal 0, parent.related_models.count
     assert_equal 1, parent.related_models.unscoped.count
