@@ -8,31 +8,67 @@ FileUtils.mkdir_p File.dirname(DB_FILE)
 FileUtils.rm_f DB_FILE
 
 ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => DB_FILE
-ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
-ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
+
+ActiveRecord::Migration.class_exec do
+  self.verbose = false
+
+  create_table :parent_models do |t|
+    t.datetime :deleted_at
+  end
+
+  create_table :paranoid_models do |t|
+    t.references :parent_model
+    t.datetime :deleted_at
+  end
+
+  create_table :featureful_models do |t|
+    t.string :name
+    t.datetime :deleted_at
+  end
+
+  create_table :plain_models do |t|
+    t.datetime :deleted_at
+  end
+
+  create_table :callback_models do |t|
+    t.datetime :deleted_at
+  end
+
+  create_table :related_models do |t|
+    t.references :parent_model
+    t.datetime :deleted_at
+  end
+
+  create_table :employers do |t|
+    t.datetime :deleted_at
+  end
+
+  create_table :employees do |t|
+    t.datetime :deleted_at
+  end
+
+  create_table :jobs do |t|
+    t.references :employer
+    t.references :employee
+    t.datetime :deleted_at
+  end
+end
 
 class ParanoiaTest < Test::Unit::TestCase
   def test_plain_model_class_is_not_paranoid
-    assert_equal false, PlainModel.paranoid?
+    assert !PlainModel.paranoid?
   end
 
   def test_paranoid_model_class_is_paranoid
-    assert_equal true, ParanoidModel.paranoid?
+    assert ParanoidModel.paranoid?
   end
 
   def test_plain_models_are_not_paranoid
-    assert_equal false, PlainModel.new.paranoid?
+    assert !PlainModel.new.paranoid?
   end
 
   def test_paranoid_models_are_paranoid
-    assert_equal true, ParanoidModel.new.paranoid?
+    assert ParanoidModel.new.paranoid?
   end
 
   def test_paranoid_models_to_param
@@ -42,7 +78,7 @@ class ParanoiaTest < Test::Unit::TestCase
 
     model.destroy
 
-    assert_not_equal nil, model.to_param
+    assert_not_nil model.to_param
     assert_equal to_param, model.to_param
   end
 
@@ -53,7 +89,7 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 1, model.class.count
     model.destroy
 
-    assert_equal true, model.deleted_at.nil?
+    assert model.deleted_at.nil?
 
     assert_equal 0, model.class.count
     assert_equal 0, model.class.unscoped.count
@@ -66,12 +102,12 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 1, model.class.count
     model.destroy
 
-    assert_equal false, model.deleted_at.nil?
+    assert_not_nil model.deleted_at
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
   end
-  
+
   def test_scoping_behavior_for_paranoid_models
     ParanoidModel.unscoped.delete_all
     parent1 = ParentModel.create
@@ -94,7 +130,7 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 1, model.class.count
     model.destroy
 
-    assert_equal false, model.deleted_at.nil?
+    assert_not_nil model.deleted_at
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
@@ -103,7 +139,7 @@ class ParanoiaTest < Test::Unit::TestCase
   # Regression test for #24
   def test_chaining_for_paranoid_models
     scope = FeaturefulModel.where(:name => "foo").only_deleted
-    assert_equal "foo", scope.where_values_hash[:name]
+    assert_equal "foo", scope.where_values_hash["name"]
     assert_equal 2, scope.where_values.count
   end
 
@@ -115,7 +151,7 @@ class ParanoiaTest < Test::Unit::TestCase
     model2.save
 
     assert_equal model, ParanoidModel.only_deleted.last
-    assert_equal false, ParanoidModel.only_deleted.include?(model2)
+    assert !ParanoidModel.only_deleted.include?(model2)
   end
 
   def test_default_scope_for_has_many_relationships
@@ -126,7 +162,7 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 1, parent.related_models.count
 
     child.destroy
-    assert_equal false, child.deleted_at.nil?
+    assert_not_nil child.deleted_at
 
     assert_equal 0, parent.related_models.count
     assert_equal 1, parent.related_models.unscoped.count
@@ -185,7 +221,7 @@ class ParanoiaTest < Test::Unit::TestCase
     model.restore!
     model.reload
 
-    assert_equal false, model.destroyed?
+    assert !model.destroyed?
   end
 
   def test_real_destroy
@@ -193,7 +229,7 @@ class ParanoiaTest < Test::Unit::TestCase
     model.save
     model.destroy!
 
-    assert_equal false, ParanoidModel.unscoped.exists?(model.id)
+    assert !ParanoidModel.unscoped.exists?(model.id)
   end
 
   def test_real_delete
@@ -201,10 +237,11 @@ class ParanoiaTest < Test::Unit::TestCase
     model.save
     model.delete!
 
-    assert_equal false, ParanoidModel.unscoped.exists?(model.id)
+    assert !ParanoidModel.unscoped.exists?(model.id)
   end
 
-  private
+private
+
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
   end
