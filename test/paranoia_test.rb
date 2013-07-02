@@ -1,5 +1,6 @@
 require 'test/unit'
 require 'active_record'
+require 'debugger'
 require File.expand_path(File.dirname(__FILE__) + '/../lib/paranoia')
 
 DB_FILE = 'tmp/test_db'
@@ -103,7 +104,7 @@ class ParanoiaTest < Test::Unit::TestCase
   # Regression test for #24
   def test_chaining_for_paranoid_models
     scope = FeaturefulModel.where(:name => 'foo').only_deleted
-    assert_equal 'foo', scope.where_values_hash[:name]
+    assert_equal 'foo', scope.where_values_hash['name']
     assert_equal 2, scope.where_values.count
   end
 
@@ -193,15 +194,14 @@ class ParanoiaTest < Test::Unit::TestCase
     model.save
     model.destroy!
 
-    assert_equal false, ParanoidModel.unscoped.exists?(model.id)
+    assert_equal 0, ParanoidModel.unscoped.where(id: model.id).count
   end
 
   def test_real_delete
     model = ParanoidModel.new
     model.save
     model.delete!
-
-    assert_equal false, ParanoidModel.unscoped.exists?(model.id)
+    assert_equal 0, ParanoidModel.unscoped.where(id: model.id).count
   end
 
   private
