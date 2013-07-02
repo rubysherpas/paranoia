@@ -9,11 +9,11 @@ module Paranoia
     end
 
     def only_deleted
-      scoped.tap { |x| x.default_scoped = false }.where("#{self.table_name}.deleted_at IS NOT NULL")
+      all.tap { |x| x.default_scoped = false }.where("#{self.table_name}.deleted_at IS NOT NULL")
     end
 
     def with_deleted
-      scoped.tap { |x| x.default_scoped = false }
+      all.tap { |x| x.default_scoped = false }
     end
   end
 
