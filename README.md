@@ -6,10 +6,24 @@ You would use either plugin / gem if you wished that when you called `destroy` o
 
 ## Installation & Usage
 
-Put this in your Gemfile:
+For Rails 3, please use version 1 of Paranoia:
 
 ```ruby
-gem 'paranoia'
+gem 'paranoia', '~> 1.0'
+```
+
+For Rails 4, please use version 2 of Paranoia:
+
+```ruby
+gem 'paranoia', '~> 2.0'
+```
+
+Of course you can install this from GitHub as well:
+
+```ruby
+gem 'paranoia', :github => 'radar/paranoia', :branch => 'master'
+# or
+gem 'paranoia', :github => 'radar/paranoia', :branch => 'rails-4'
 ```
 
 Then run:
