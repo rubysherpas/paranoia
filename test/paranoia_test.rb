@@ -103,7 +103,8 @@ class ParanoiaTest < Test::Unit::TestCase
   # Regression test for #24
   def test_chaining_for_paranoid_models
     scope = FeaturefulModel.where(:name => "foo").only_deleted
-    assert_equal "foo", scope.where_values_hash[:name]
+
+    assert_equal "foo", scope.where_values_hash["name"]
     assert_equal 2, scope.where_values.count
   end
 
