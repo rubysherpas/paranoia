@@ -11,6 +11,7 @@ module Paranoia
     def only_deleted
       all.tap { |x| x.default_scoped = false }.where("#{self.table_name}.deleted_at IS NOT NULL")
     end
+    alias :deleted :only_deleted
 
     def with_deleted
       all.tap { |x| x.default_scoped = false }
@@ -29,6 +30,7 @@ module Paranoia
   def restore!
     update_attribute_or_column :deleted_at, nil
   end
+  alias :restore :restore!
 
   def destroyed?
     !self.deleted_at.nil?
