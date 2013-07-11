@@ -9,12 +9,12 @@ module Paranoia
     end
 
     def only_deleted
-      all.tap { |x| x.default_scoped = false }.where("#{self.table_name}.deleted_at IS NOT NULL")
+      scoped.tap { |x| x.default_scoped = false }.where("#{self.table_name}.deleted_at IS NOT NULL")
     end
     alias :deleted :only_deleted
 
     def with_deleted
-      all.tap { |x| x.default_scoped = false }
+      scoped.tap { |x| x.default_scoped = false }
     end
   end
 
