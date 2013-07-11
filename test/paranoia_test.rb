@@ -83,6 +83,7 @@ class ParanoiaTest < Test::Unit::TestCase
     p2.destroy
     assert_equal 0, parent1.paranoid_models.count
     assert_equal 1, parent1.paranoid_models.only_deleted.count
+    assert_equal 1, parent1.paranoid_models.deleted.count
     p3 = ParanoidModel.create(:parent_model => parent1)
     assert_equal 2, parent1.paranoid_models.with_deleted.count
     assert_equal [p1, p3], parent1.paranoid_models.with_deleted
@@ -117,6 +118,7 @@ class ParanoiaTest < Test::Unit::TestCase
 
     assert_equal model, ParanoidModel.only_deleted.last
     assert_equal false, ParanoidModel.only_deleted.include?(model2)
+    assert_equal false, ParanoidModel.deleted.include?(model2)
   end
 
   def test_default_scope_for_has_many_relationships
