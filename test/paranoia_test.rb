@@ -1,6 +1,5 @@
 require 'test/unit'
 require 'active_record'
-require 'debugger'
 require File.expand_path(File.dirname(__FILE__) + '/../lib/paranoia')
 
 DB_FILE = 'tmp/test_db'
