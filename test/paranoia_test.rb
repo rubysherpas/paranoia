@@ -1,6 +1,6 @@
 require 'test/unit'
 require 'active_record'
-require File.expand_path(File.dirname(__FILE__) + "/../lib/paranoia")
+require File.expand_path(File.dirname(__FILE__) + '/../lib/paranoia')
 
 DB_FILE = 'tmp/test_db'
 
@@ -71,7 +71,7 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
   end
-  
+
   def test_scoping_behavior_for_paranoid_models
     ParanoidModel.unscoped.delete_all
     parent1 = ParentModel.create
@@ -82,9 +82,10 @@ class ParanoiaTest < Test::Unit::TestCase
     p2.destroy
     assert_equal 0, parent1.paranoid_models.count
     assert_equal 1, parent1.paranoid_models.only_deleted.count
+    assert_equal 1, parent1.paranoid_models.deleted.count
     p3 = ParanoidModel.create(:parent_model => parent1)
     assert_equal 2, parent1.paranoid_models.with_deleted.count
-    assert_equal [p1,p3], parent1.paranoid_models.with_deleted
+    assert_equal [p1, p3], parent1.paranoid_models.with_deleted
   end
 
   def test_destroy_behavior_for_featureful_paranoid_models
@@ -102,9 +103,8 @@ class ParanoiaTest < Test::Unit::TestCase
 
   # Regression test for #24
   def test_chaining_for_paranoid_models
-    scope = FeaturefulModel.where(:name => "foo").only_deleted
-
-    assert_equal "foo", scope.where_values_hash["name"]
+    scope = FeaturefulModel.where(:name => 'foo').only_deleted
+    assert_equal 'foo', scope.where_values_hash['name']
     assert_equal 2, scope.where_values.count
   end
 
@@ -117,6 +117,7 @@ class ParanoiaTest < Test::Unit::TestCase
 
     assert_equal model, ParanoidModel.only_deleted.last
     assert_equal false, ParanoidModel.only_deleted.include?(model2)
+    assert_equal false, ParanoidModel.deleted.include?(model2)
   end
 
   def test_default_scope_for_has_many_relationships
@@ -194,20 +195,19 @@ class ParanoiaTest < Test::Unit::TestCase
     model.save
     model.destroy!
 
-    assert_equal false, !!ParanoidModel.unscoped.exists?(model.id)
+    assert_equal 0, ParanoidModel.unscoped.where(id: model.id).count
   end
 
   def test_real_delete
     model = ParanoidModel.new
     model.save
     model.delete!
-
-    assert_equal false, !!ParanoidModel.unscoped.exists?(model.id)
+    assert_equal 0, ParanoidModel.unscoped.where(id: model.id).count
   end
 
   private
   def get_featureful_model
-    FeaturefulModel.new(:name => "not empty")
+    FeaturefulModel.new(:name => 'not empty')
   end
 end
 
@@ -232,7 +232,7 @@ end
 
 class CallbackModel < ActiveRecord::Base
   acts_as_paranoid
-  before_destroy {|model| model.instance_variable_set :@callback_called, true }
+  before_destroy { |model| model.instance_variable_set :@callback_called, true }
 end
 
 class ParentModel < ActiveRecord::Base
