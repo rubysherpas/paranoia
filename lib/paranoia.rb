@@ -4,11 +4,14 @@ module Paranoia
   end
 
   module Query
-    def paranoid? ; true ; end
+    def paranoid?
+      true
+    end
 
     def only_deleted
-      scoped.tap { |x| x.default_scoped = false }.where("#{self.table_name}.deleted_at is not null")
+      scoped.tap { |x| x.default_scoped = false }.where("#{self.table_name}.deleted_at IS NOT NULL")
     end
+    alias :deleted :only_deleted
 
     def with_deleted
       scoped.tap { |x| x.default_scoped = false }
@@ -27,10 +30,12 @@ module Paranoia
   def restore!
     update_attribute_or_column :deleted_at, nil
   end
+  alias :restore :restore!
 
   def destroyed?
     !self.deleted_at.nil?
   end
+
   alias :deleted? :destroyed?
 
   private
@@ -44,13 +49,18 @@ end
 class ActiveRecord::Base
   def self.acts_as_paranoid
     alias :destroy! :destroy
-    alias :delete!  :delete
+    alias :delete! :delete
     include Paranoia
-    default_scope { where(:deleted_at => nil) }
+    default_scope { where(deleted_at: nil) }
   end
 
-  def self.paranoid? ; false ; end
-  def paranoid? ; self.class.paranoid? ; end
+  def self.paranoid?
+    false
+  end
+
+  def paranoid?
+    self.class.paranoid?
+  end
 
   # Override the persisted method to allow for the paranoia gem.
   # If a paranoid record is selected, then we only want to check
