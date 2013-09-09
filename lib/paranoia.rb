@@ -13,6 +13,14 @@ module Paranoia
     def with_deleted
       all.tap { |x| x.default_scoped = false }
     end
+
+    def restore(id)
+      if id.is_a?(Array)
+        id.map { |one_id| restore(one_id) }
+      else
+        only_deleted.find(id).restore!
+      end
+    end
   end
 
   def destroy
