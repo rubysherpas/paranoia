@@ -205,6 +205,33 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 0, ParanoidModel.unscoped.where(id: model.id).count
   end
 
+  def test_multiple_restore
+    a = ParanoidModel.new
+    a.save
+    a_id = a.id
+    a.destroy
+
+    b = ParanoidModel.new
+    b.save
+    b_id = b.id
+    b.destroy
+
+    c = ParanoidModel.new
+    c.save
+    c_id = c.id
+    c.destroy
+
+    ParanoidModel.restore([a_id, c_id])
+
+    a.reload
+    b.reload
+    c.reload
+
+    refute a.destroyed?
+    assert b.destroyed?
+    refute c.destroyed?
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => 'not empty')
