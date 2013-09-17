@@ -50,7 +50,9 @@ module Paranoia
 
   # Rails 3.1 adds update_column. Rails > 3.2.6 deprecates update_attribute, gone in Rails 4.
   def update_attribute_or_column(*args)
-    respond_to?(:update_column) ? update_column(*args) : update_attribute(*args)
+    self.class.unscoped do
+      respond_to?(:update_column) ? update_column(*args) : update_attribute(*args)
+    end
   end
 end
 
