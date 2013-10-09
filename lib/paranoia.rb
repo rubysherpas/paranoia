@@ -31,8 +31,8 @@ module Paranoia
   end
 
   def delete
-    return if new_record? or destroyed?
-    update_attribute_or_column :deleted_at, Time.now
+    return if new_record?
+    destroyed? ? destroy! : update_attribute_or_column(:deleted_at, Time.now)
   end
 
   def restore!
