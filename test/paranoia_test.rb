@@ -188,6 +188,15 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal false, model.destroyed?
   end
 
+  def test_destroy_twice
+    model = ParanoidModel.new
+    model.save
+    model.destroy
+    model.destroy
+
+    assert_equal 0, ParanoidModel.unscoped.where(id: model.id).count
+  end
+
   def test_real_destroy
     model = ParanoidModel.new
     model.save
