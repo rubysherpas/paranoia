@@ -28,7 +28,7 @@ module Paranoia
   end
 
   def delete
-    return if new_record? or destroyed?
+    return if new_record?
     destroyed? ? destroy! : update_column(:deleted_at, Time.now)
   end
 
