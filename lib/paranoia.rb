@@ -1,6 +1,7 @@
 module Paranoia
   def self.included(klazz)
     klazz.extend Query
+    klazz.extend Callbacks
   end
 
   module Query
@@ -15,6 +16,24 @@ module Paranoia
     end
   end
 
+  module Callbacks
+    def self.extended(klazz)
+      klazz.define_callbacks :restore
+
+      klazz.define_singleton_method("before_restore") do |*args, &block|
+        set_callback(:restore, :before, *args, &block)
+      end
+
+      klazz.define_singleton_method("around_restore") do |*args, &block|
+        set_callback(:restore, :around, *args, &block)
+      end
+
+      klazz.define_singleton_method("after_restore") do |*args, &block|
+        set_callback(:restore, :after, *args, &block)
+      end
+    end
+  end
+
   def destroy
     run_callbacks(:destroy) { delete }
   end
@@ -25,7 +44,7 @@ module Paranoia
   end
 
   def restore!
-    update_column :deleted_at, nil
+    run_callbacks(:restore) { update_column :deleted_at, nil }
   end
 
   def destroyed?
