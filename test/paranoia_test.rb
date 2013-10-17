@@ -199,6 +199,22 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 0, ParanoidModel.unscoped.where(id: model.id).count
   end
 
+  def test_restore_behavior_for_callbacks
+    model = CallbackModel.new
+    model.save
+    id = model.id
+    model.destroy
+
+    assert model.destroyed?
+
+    model = CallbackModel.only_deleted.find(id)
+    model.restore!
+    model.reload
+
+    assert model.instance_variable_get(:@restore_callback_called)
+>>>>>>> Add callbacks for 'new' AR lifecycle :restore
+  end
+
   def test_real_destroy
     model = ParanoidModel.new
     model.save
@@ -268,7 +284,8 @@ end
 
 class CallbackModel < ActiveRecord::Base
   acts_as_paranoid
-  before_destroy { |model| model.instance_variable_set :@callback_called, true }
+  before_destroy {|model| model.instance_variable_set :@callback_called, true }
+  before_restore {|model| model.instance_variable_set :@restore_callback_called, true }
 end
 
 class ParentModel < ActiveRecord::Base
