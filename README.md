@@ -4,6 +4,8 @@ Paranoia is a re-implementation of [acts\_as\_paranoid](http://github.com/techno
 
 You would use either plugin / gem if you wished that when you called `destroy` on an Active Record object that it didn't actually destroy it, but just "hid" the record. Paranoia does this by setting a `deleted_at` field to the current time when you `destroy` a record, and hides it by scoping all queries on your model to only include records which do not have a `deleted_at` field.
 
+If you wish to actually destroy an object you may call destroy! on it or simply call destroy twice on the same object.
+
 ## Installation & Usage
 
 For Rails 3, please use version 1 of Paranoia:

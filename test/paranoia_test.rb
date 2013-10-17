@@ -71,7 +71,7 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
   end
-  
+
   def test_scoping_behavior_for_paranoid_models
     ParanoidModel.unscoped.delete_all
     parent1 = ParentModel.create
@@ -203,6 +203,15 @@ class ParanoiaTest < Test::Unit::TestCase
     assert model.instance_variable_get(:@restore_callback_called)
   end
 
+  def test_destroy_twice
+    model = ParanoidModel.new
+    model.save
+    model.destroy
+    model.destroy
+
+    assert_equal 0, ParanoidModel.unscoped.where(id: model.id).count
+  end
+
   def test_real_destroy
     model = ParanoidModel.new
     model.save
@@ -217,6 +226,33 @@ class ParanoiaTest < Test::Unit::TestCase
     model.delete!
 
     refute ParanoidModel.unscoped.exists?(model.id)
+  end
+
+  def test_multiple_restore
+    a = ParanoidModel.new
+    a.save
+    a_id = a.id
+    a.destroy
+
+    b = ParanoidModel.new
+    b.save
+    b_id = b.id
+    b.destroy
+
+    c = ParanoidModel.new
+    c.save
+    c_id = c.id
+    c.destroy
+
+    ParanoidModel.restore([a_id, c_id])
+
+    a.reload
+    b.reload
+    c.reload
+
+    refute a.destroyed?
+    assert b.destroyed?
+    refute c.destroyed?
   end
 
   private

@@ -14,6 +14,14 @@ module Paranoia
     def with_deleted
       all.tap { |x| x.default_scoped = false }
     end
+
+    def restore(id)
+      if id.is_a?(Array)
+        id.map { |one_id| restore(one_id) }
+      else
+        only_deleted.find(id).restore!
+      end
+    end
   end
 
   module Callbacks
@@ -39,8 +47,8 @@ module Paranoia
   end
 
   def delete
-    return if new_record? or destroyed?
-    update_column :deleted_at, Time.now
+    return if new_record?
+    destroyed? ? destroy! : update_column(:deleted_at, Time.now)
   end
 
   def restore!
