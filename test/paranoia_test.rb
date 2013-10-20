@@ -212,7 +212,6 @@ class ParanoiaTest < Test::Unit::TestCase
     model.reload
 
     assert model.instance_variable_get(:@restore_callback_called)
->>>>>>> Add callbacks for 'new' AR lifecycle :restore
   end
 
   def test_real_destroy
