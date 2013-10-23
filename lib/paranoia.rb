@@ -66,7 +66,7 @@ class ActiveRecord::Base
     alias :destroy! :destroy
     alias :delete!  :delete
     include Paranoia
-    default_scope { where(:deleted_at => nil) }
+    default_scope { where(self.quoted_table_name + '.deleted_at IS NULL') }
   end
 
   def self.paranoid? ; false ; end
