@@ -7,12 +7,12 @@ module Paranoia
   module Query
     def paranoid? ; true ; end
 
-    def only_deleted
-      all.tap { |x| x.default_scoped = false }.where.not(deleted_at: nil)
-    end
-
     def with_deleted
       all.tap { |x| x.default_scoped = false }
+    end
+
+    def only_deleted
+      with_deleted.where.not(deleted_at: nil)
     end
 
     def restore(id)
