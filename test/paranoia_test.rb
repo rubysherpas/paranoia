@@ -82,6 +82,7 @@ class ParanoiaTest < Test::Unit::TestCase
     p2.destroy
     assert_equal 0, parent1.paranoid_models.count
     assert_equal 1, parent1.paranoid_models.only_deleted.count
+    assert_equal 1, parent1.paranoid_models.deleted.count
     p3 = ParanoidModel.create(:parent_model => parent1)
     assert_equal 2, parent1.paranoid_models.with_deleted.count
     assert_equal [p1,p3], parent1.paranoid_models.with_deleted

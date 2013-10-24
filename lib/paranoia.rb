@@ -14,6 +14,7 @@ module Paranoia
     def only_deleted
       with_deleted.where.not(deleted_at: nil)
     end
+    alias :deleted :only_deleted
 
     def restore(id)
       if id.is_a?(Array)
