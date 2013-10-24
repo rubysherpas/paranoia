@@ -25,7 +25,7 @@ Of course you can install this from GitHub as well:
 ```ruby
 gem 'paranoia', :github => 'radar/paranoia', :branch => 'master'
 # or
-gem 'paranoia', :github => 'radar/paranoia', :branch => 'rails-4'
+gem 'paranoia', :github => 'radar/paranoia', :branch => 'rails4'
 ```
 
 Then run:
