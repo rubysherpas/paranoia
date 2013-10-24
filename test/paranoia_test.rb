@@ -17,6 +17,7 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER N
 ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
 
 class ParanoiaTest < Test::Unit::TestCase
   def test_plain_model_class_is_not_paranoid
@@ -86,6 +87,23 @@ class ParanoiaTest < Test::Unit::TestCase
     p3 = ParanoidModel.create(:parent_model => parent1)
     assert_equal 2, parent1.paranoid_models.with_deleted.count
     assert_equal [p1, p3], parent1.paranoid_models.with_deleted
+  end
+
+  def test_destroy_behavior_for_custom_column_models
+    model = CustomColumnModel.new
+    assert_equal 0, model.class.count
+    model.save!
+    assert_nil model.destroyed_at
+    assert_equal 1, model.class.count
+    model.destroy
+
+    assert_equal false, model.destroyed_at.nil?
+    assert model.destroyed?
+
+    assert_equal 0, model.class.count
+    assert_equal 1, model.class.unscoped.count
+    assert_equal 1, model.class.only_deleted.count
+    assert_equal 1, model.class.deleted.count
   end
 
   def test_destroy_behavior_for_featureful_paranoid_models
@@ -313,4 +331,8 @@ class Job < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :employer
   belongs_to :employee
+end
+
+class CustomColumnModel < ActiveRecord::Base
+  acts_as_paranoid column: :destroyed_at
 end

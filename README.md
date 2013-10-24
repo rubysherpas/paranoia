@@ -84,6 +84,16 @@ class Client < ActiveRecord::Base
 end
 ```
 
+If you want to use a column other than deleted_at, you can pass it as an option:
+
+```ruby
+class Client < ActiveRecord::Base
+  acts_as_paranoid column: :destroyed_at
+
+  ...
+end
+```
+
 You can replace the older acts_as_paranoid methods as follows:
 
 | Old Syntax                 | New Syntax                     |
