@@ -9,14 +9,15 @@ module Paranoia
       true
     end
 
-    def only_deleted
-      scoped.tap { |x| x.default_scoped = false }.where("#{self.table_name}.deleted_at IS NOT NULL")
-    end
-    alias :deleted :only_deleted
 
     def with_deleted
       scoped.tap { |x| x.default_scoped = false }
     end
+
+    def only_deleted
+      with_deleted.where("#{self.table_name}.deleted_at IS NOT NULL")
+    end
+    alias :deleted :only_deleted
 
     def restore(id)
       if id.is_a?(Array)
