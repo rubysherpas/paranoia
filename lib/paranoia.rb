@@ -60,7 +60,7 @@ module Paranoia
   alias :restore :restore!
 
   def destroyed?
-    !self.deleted_at.nil?
+    !!deleted_at
   end
 
   alias :deleted? :destroyed?
