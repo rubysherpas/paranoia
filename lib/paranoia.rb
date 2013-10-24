@@ -49,7 +49,7 @@ module Paranoia
 
   def delete
     return if new_record?
-    destroyed? ? destroy! : update_column(:deleted_at, Time.now)
+    destroyed? ? force_destroy : update_column(:deleted_at, Time.now)
   end
 
   def restore!
@@ -64,8 +64,8 @@ end
 
 class ActiveRecord::Base
   def self.acts_as_paranoid
-    alias :destroy! :destroy
-    alias :delete!  :delete
+    alias :force_destroy :destroy
+    alias :force_delete  :delete
     include Paranoia
     default_scope { where(self.quoted_table_name + '.deleted_at IS NULL') }
   end

@@ -213,18 +213,18 @@ class ParanoiaTest < Test::Unit::TestCase
     assert model.instance_variable_get(:@restore_callback_called)
   end
 
-  def test_real_destroy
+  def test_force_destroy
     model = ParanoidModel.new
     model.save
-    model.destroy!
+    model.force_destroy
 
     refute ParanoidModel.unscoped.exists?(model.id)
   end
 
-  def test_real_delete
+  def test_force_delete
     model = ParanoidModel.new
     model.save
-    model.delete!
+    model.force_delete
 
     refute ParanoidModel.unscoped.exists?(model.id)
   end
