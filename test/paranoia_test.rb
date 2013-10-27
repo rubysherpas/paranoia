@@ -18,6 +18,7 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NU
 ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE unscoped_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 
 class ParanoiaTest < Test::Unit::TestCase
   def test_plain_model_class_is_not_paranoid
@@ -274,6 +275,11 @@ class ParanoiaTest < Test::Unit::TestCase
     refute c.destroyed?
   end
 
+  def test_unscoped_model_default_scope
+    UnscopedModel.create(deleted_at: Time.now)
+    assert_equal 1, UnscopedModel.count
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
@@ -335,4 +341,8 @@ end
 
 class CustomColumnModel < ActiveRecord::Base
   acts_as_paranoid column: :destroyed_at
+end
+
+class UnscopedModel < ActiveRecord::Base
+  acts_as_paranoid default_scope: false
 end
