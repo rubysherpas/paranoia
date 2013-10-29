@@ -14,6 +14,11 @@ module Paranoia
       scoped.tap { |x| x.default_scoped = false }
     end
 
+    def without_deleted
+      where(paranoia_column => nil)
+    end
+    alias :undeleted :without_deleted
+
     def only_deleted
       with_deleted.where("#{self.table_name}.#{paranoia_column} IS NOT NULL")
     end
@@ -84,7 +89,8 @@ class ActiveRecord::Base
     class_attribute :paranoia_column
 
     self.paranoia_column = options[:column] || :deleted_at
-    default_scope { where(self.quoted_table_name + ".#{paranoia_column} IS NULL") }
+
+    default_scope { without_deleted } unless options[:default_scope] == false
   end
 
   def self.paranoid?
