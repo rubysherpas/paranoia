@@ -15,12 +15,12 @@ module Paranoia
     end
 
     def without_deleted
-      where(paranoia_column => nil)
+      where("#{self.quoted_table_name}.#{paranoia_column} IS NULL")
     end
     alias :undeleted :without_deleted
 
     def only_deleted
-      with_deleted.where("#{self.table_name}.#{paranoia_column} IS NOT NULL")
+      with_deleted.where("#{self.quoted_table_name}.#{paranoia_column} IS NOT NULL")
     end
     alias :deleted :only_deleted
 
