@@ -49,11 +49,11 @@ module Paranoia
 
   def delete
     return if new_record?
-    destroyed? ? destroy! : update_column(paranoia_column, Time.now)
+    destroyed? ? destroy! : update_attributes(paranoia_column => Time.now)
   end
 
   def restore!
-    run_callbacks(:restore) { update_column paranoia_column, nil }
+    run_callbacks(:restore) { update_attributes(paranoia_column => nil) }
   end
 
   def destroyed?
