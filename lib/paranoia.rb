@@ -49,17 +49,26 @@ module Paranoia
 
   def delete
     return if new_record?
-    destroyed? ? destroy! : update_attributes(paranoia_column => Time.now)
+    destroyed? ? destroy! : update_attrs_without_valid(paranoia_column => Time.now)
   end
 
   def restore!
-    run_callbacks(:restore) { update_attributes(paranoia_column => nil) }
+    run_callbacks(:restore) { update_attrs_without_valid(paranoia_column => nil) }
   end
 
   def destroyed?
     !!send(paranoia_column)
   end
   alias :deleted? :destroyed?
+
+  private
+
+  # update attributes without validation
+  # @param attributes [Hash] attributes
+  def update_attrs_without_valid(attributes)
+    assign_attributes(attributes)
+    save(:validate => false)
+  end
 end
 
 class ActiveRecord::Base
