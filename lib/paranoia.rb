@@ -52,11 +52,11 @@ module Paranoia
 
   def delete
     return if new_record?
-    destroyed? ? destroy! : update_attribute_or_column(paranoia_column, Time.now)
+    destroyed? ? destroy! : update_attrs_without_valid(paranoia_column => Time.now)
   end
 
   def restore!
-    run_callbacks(:restore) { update_column paranoia_column, nil }
+    run_callbacks(:restore) { update_attrs_without_valid(paranoia_column => nil) }
   end
   alias :restore :restore!
 
@@ -68,12 +68,13 @@ module Paranoia
 
   private
 
-  # Rails 3.1 adds update_column. Rails > 3.2.6 deprecates update_attribute, gone in Rails 4.
-  def update_attribute_or_column(*args)
-    self.class.unscoped do
-      respond_to?(:update_column) ? update_column(*args) : update_attribute(*args)
-    end
+  # update attributes without validation
+  # @param attributes [Hash] attributes
+  def update_attrs_without_valid(attributes)
+    assign_attributes(attributes)
+    save(:validate => false)
   end
+
 end
 
 class ActiveRecord::Base
