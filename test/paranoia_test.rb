@@ -2,22 +2,57 @@ require 'test/unit'
 require 'active_record'
 require File.expand_path(File.dirname(__FILE__) + "/../lib/paranoia")
 
-DB_FILE = 'tmp/test_db'
+# DB_FILE = 'tmp/test_db'
 
-FileUtils.mkdir_p File.dirname(DB_FILE)
-FileUtils.rm_f DB_FILE
+# FileUtils.mkdir_p File.dirname(DB_FILE)
+# FileUtils.rm_f DB_FILE
 
-ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => DB_FILE
-ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
-ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
+# ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => DB_FILE
+
+ActiveRecord::Base.establish_connection :adapter => 'postgresql', :database => 'postgres', :host  => 'localhost'
+ActiveRecord::Base.connection.drop_database 'paranoid' rescue nil
+ActiveRecord::Base.connection.create_database 'paranoid'
+ActiveRecord::Base.connection.close
+ActiveRecord::Base.establish_connection :adapter => 'postgresql', :database => 'paranoid', :host  => 'localhost'
+
+
+ActiveRecord::Schema.define do
+  create_table "parent_models", force: true do |t|
+    t.datetime "deleted_at"
+  end
+  create_table "paranoid_models", force: true do |t|
+    t.integer "parent_model_id"
+    t.datetime "deleted_at"
+  end
+  create_table "featureful_models", force: true do |t|
+    t.datetime "deleted_at"
+    t.string "name", length: 32
+  end
+  create_table "plain_models", force: true do |t|
+    t.datetime "deleted_at"
+  end
+  create_table "callback_models", force: true do |t|
+    t.datetime "deleted_at"
+  end
+  create_table "related_models", force: true do |t|
+    t.integer "parent_model_id", null: false
+    t.datetime "deleted_at"
+  end
+  create_table "employers", force: true do |t|
+    t.datetime "deleted_at"
+  end
+  create_table "employees", force: true do |t|
+    t.datetime "deleted_at"
+  end
+  create_table "jobs", force: true do |t|
+    t.integer "employer_id", null: false
+    t.integer "employee_id", null: false
+    t.datetime "deleted_at"
+  end
+  create_table "custom_column_models", force: true do |t|
+    t.datetime "destroyed_at"
+  end
+end
 
 class ParanoiaTest < Test::Unit::TestCase
   def test_plain_model_class_is_not_paranoid
@@ -272,6 +307,12 @@ class ParanoiaTest < Test::Unit::TestCase
     refute a.destroyed?
     assert b.destroyed?
     refute c.destroyed?
+  end
+
+  def test_joining_a_table_multiple_times
+    employer = Employer.create
+    employee = Employee.create
+    assert_equal 0, employer.employees.joins(:jobs).count
   end
 
   private
