@@ -60,6 +60,14 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 0, model.class.unscoped.count
   end
 
+  # Anti-regression test for #81, which would've introduced a bug to break this test.
+  def test_destroy_behavior_for_plain_models_callbacks
+    model = CallbackModel.new
+    model.destroy
+    assert_equal nil, model.instance_variable_get(:@update_callback_called)
+    assert_equal nil, model.instance_variable_get(:@save_callback_called)
+  end
+
   def test_destroy_behavior_for_paranoid_models
     model = ParanoidModel.new
     assert_equal 0, model.class.count
@@ -183,14 +191,14 @@ class ParanoiaTest < Test::Unit::TestCase
     model = CallbackModel.new
     model.save
     model.delete
-    assert_equal nil, model.instance_variable_get(:@callback_called)
+    assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
   end
 
   def test_destroy_behavior_for_callbacks
     model = CallbackModel.new
     model.save
     model.destroy
-    assert model.instance_variable_get(:@callback_called)
+    assert model.instance_variable_get(:@destroy_callback_called)
   end
 
   def test_restore
@@ -301,8 +309,10 @@ end
 
 class CallbackModel < ActiveRecord::Base
   acts_as_paranoid
-  before_destroy {|model| model.instance_variable_set :@callback_called, true }
+  before_destroy {|model| model.instance_variable_set :@destroy_callback_called, true }
   before_restore {|model| model.instance_variable_set :@restore_callback_called, true }
+  before_update  {|model| model.instance_variable_set :@update_callback_called, true }
+  before_save    {|model| model.instance_variable_set :@save_callback_called, true}
 end
 
 class ParentModel < ActiveRecord::Base
