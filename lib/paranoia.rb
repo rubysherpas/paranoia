@@ -44,12 +44,12 @@ module Paranoia
   end
 
   def destroy
-    run_callbacks(:destroy) { delete }
+    run_callbacks(:destroy) { delete_or_soft_delete(true) }
   end
 
   def delete
     return if new_record?
-    destroyed? ? destroy! : update_column(paranoia_column, Time.now)
+    delete_or_soft_delete
   end
 
   def restore!
@@ -60,6 +60,24 @@ module Paranoia
     !!send(paranoia_column)
   end
   alias :deleted? :destroyed?
+
+  private
+  # select and exec delete or soft-delete.
+  # @param with_transaction [Boolean] exec with ActiveRecord Transactions, when soft-delete.
+  def delete_or_soft_delete(with_transaction=false)
+    destroyed? ? destroy! : touch_paranoia_column(with_transaction)
+  end
+
+  # touch paranoia column.
+  # insert time to paranoia column.
+  # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
+  def touch_paranoia_column(with_transaction=false)
+    if with_transaction
+      with_transaction_returning_status { touch(paranoia_column) }
+    else
+      touch(paranoia_column)
+    end
+  end
 end
 
 class ActiveRecord::Base
