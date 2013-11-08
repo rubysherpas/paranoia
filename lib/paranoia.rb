@@ -12,7 +12,7 @@ module Paranoia
     end
 
     def only_deleted
-      with_deleted.where.not(deleted_at: nil)
+      with_deleted.where.not(paranoia_column => nil)
     end
     alias :deleted :only_deleted
 
@@ -49,25 +49,28 @@ module Paranoia
 
   def delete
     return if new_record?
-    destroyed? ? force_destroy : update_column(:deleted_at, Time.now)
+    destroyed? ? force_destroy : update_column(paranoia_column, Time.now)
   end
 
   def restore!
-    run_callbacks(:restore) { update_column :deleted_at, nil }
+    run_callbacks(:restore) { update_column paranoia_column, nil }
   end
 
   def destroyed?
-    !!deleted_at
+    !!send(paranoia_column)
   end
   alias :deleted? :destroyed?
 end
 
 class ActiveRecord::Base
-  def self.acts_as_paranoid
+  def self.acts_as_paranoid(options={})
     alias :force_destroy :destroy
     alias :force_delete  :delete
     include Paranoia
-    default_scope { where(self.quoted_table_name + '.deleted_at IS NULL') }
+    class_attribute :paranoia_column
+
+    self.paranoia_column = options[:column] || :deleted_at
+    default_scope { where(self.quoted_table_name + ".#{paranoia_column} IS NULL") }
   end
 
   def self.paranoid? ; false ; end
@@ -78,5 +81,11 @@ class ActiveRecord::Base
   # if it's a new record, not if it is "destroyed".
   def persisted?
     paranoid? ? !new_record? : super
+  end
+
+  private
+
+  def paranoia_column
+    self.class.paranoia_column
   end
 end
