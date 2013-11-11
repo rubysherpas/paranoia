@@ -63,9 +63,31 @@ class ParanoiaTest < Test::Unit::TestCase
   # Anti-regression test for #81, which would've introduced a bug to break this test.
   def test_destroy_behavior_for_plain_models_callbacks
     model = CallbackModel.new
+    model.save
+    model.remove_called_variables     # clear called callback flags
     model.destroy
+
     assert_equal nil, model.instance_variable_get(:@update_callback_called)
     assert_equal nil, model.instance_variable_get(:@save_callback_called)
+    assert_equal nil, model.instance_variable_get(:@validate_called)
+
+    assert model.instance_variable_get(:@destroy_callback_called)
+    assert model.instance_variable_get(:@after_destroy_callback_called)
+    assert model.instance_variable_get(:@after_commit_callback_called)
+  end
+
+  def test_delete_behavior_for_plain_models_callbacks
+    model = CallbackModel.new
+    model.save
+    model.remove_called_variables     # clear called callback flags
+    model.delete
+
+    assert_equal nil, model.instance_variable_get(:@update_callback_called)
+    assert_equal nil, model.instance_variable_get(:@save_callback_called)
+    assert_equal nil, model.instance_variable_get(:@validate_called)
+    assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
+    assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
+    assert_equal nil, model.instance_variable_get(:@after_commit_callback_called)
   end
 
   def test_destroy_behavior_for_paranoid_models
@@ -313,6 +335,15 @@ class CallbackModel < ActiveRecord::Base
   before_restore {|model| model.instance_variable_set :@restore_callback_called, true }
   before_update  {|model| model.instance_variable_set :@update_callback_called, true }
   before_save    {|model| model.instance_variable_set :@save_callback_called, true}
+
+  after_destroy  {|model| model.instance_variable_set :@after_destroy_callback_called, true }
+  after_commit   {|model| model.instance_variable_set :@after_commit_callback_called, true }
+
+  validate       {|model| model.instance_variable_set :@validate_called, true }
+
+  def remove_called_variables
+    instance_variables.each {|name| (name.to_s.end_with?('_called')) ? remove_instance_variable(name) : nil}
+  end
 end
 
 class ParentModel < ActiveRecord::Base
