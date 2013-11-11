@@ -47,12 +47,12 @@ module Paranoia
   end
 
   def destroy
-    run_callbacks(:destroy) { delete }
+    run_callbacks(:destroy) { delete_or_soft_delete(true) }
   end
 
   def delete
     return if new_record?
-    destroyed? ? destroy! : update_attribute_or_column(paranoia_column, Time.now)
+    delete_or_soft_delete
   end
 
   def restore!
@@ -67,11 +67,20 @@ module Paranoia
   alias :deleted? :destroyed?
 
   private
+  # select and exec delete or soft-delete.
+  # @param with_transaction [Boolean] exec with ActiveRecord Transactions, when soft-delete.
+  def delete_or_soft_delete(with_transaction=false)
+    destroyed? ? destroy! : touch_paranoia_column(with_transaction)
+  end
 
-  # Rails 3.1 adds update_column. Rails > 3.2.6 deprecates update_attribute, gone in Rails 4.
-  def update_attribute_or_column(*args)
-    self.class.unscoped do
-      respond_to?(:update_column) ? update_column(*args) : update_attribute(*args)
+  # touch paranoia column.
+  # insert time to paranoia column.
+  # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
+  def touch_paranoia_column(with_transaction=false)
+    if with_transaction
+      with_transaction_returning_status { touch(paranoia_column) }
+    else
+      touch(paranoia_column)
     end
   end
 end
