@@ -6,3 +6,5 @@ task :test do
     load testfile
   end
 end
+
+task :default => :test

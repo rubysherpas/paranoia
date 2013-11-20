@@ -12,52 +12,32 @@ Put this in your Gemfile:
 gem 'paranoia'
 ```
 
-Then run `bundle`. Done.
-
-Updating is as simple as `bundle update paranoia`.
-
-#### Rails 3
-
-In your _Gemfile_:
-
-```ruby
-gem 'paranoia'
-```
-
 Then run:
 
 ```shell
 bundle install
 ```
 
-#### Rails 2:
-
-In your _config/environment.rb_:
-
-```ruby
-config.gem 'paranoia'
-```
-
-Then run:
-
-```shell
-rake gems:install
-```
+Updating is as simple as `bundle update paranoia`.
 
 #### Run your migrations for the desired models
 
-```ruby
-class AddDeletedAtToClient < ActiveRecord::Migration
-  def self.up
-    add_column :clients, :deleted_at, :datetime
-  end
+Run:
 
-  def self.down
-    remove_column :clients, :deleted_at
+```shell
+rails generate migration AddDeletedAtToClients deleted_at:datetime
+```
+
+and now you have a migration
+
+```ruby
+class AddDeletedAtToClients < ActiveRecord::Migration
+  def change
+    add_column :clients, :deleted_at, :datetime
   end
 end
 ```
-    
+
 ### Usage
 
 #### In your model:
@@ -90,15 +70,11 @@ end
 
 You can replace the older acts_as_paranoid methods as follows:
 
-```ruby
-find_with_deleted(:all)       # => unscoped
-find_with_deleted(:first)     # => unscoped.first
-find_with_deleted(id)         # => unscoped.find(id)
-
-find_only_deleted(:all)       # => only_deleted
-find_only_deleted(:first)     # => only_deleted.first
-find_only_deleted(id)         # => only_deleted.find(id)
-```
+| Old Syntax                 | New Syntax                     |
+|:-------------------------- |:------------------------------ |
+|`find_with_deleted(:all)`   | `Client.with_deleted`          |
+|`find_with_deleted(:first)` | `Client.with_deleted.first`    |
+|`find_with_deleted(id)`     | `Client.with_deleted.find(id)` |
 
 ## License
 
