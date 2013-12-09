@@ -400,11 +400,11 @@ class ParanoidModelWithObservers < ParanoidModel
     @observers_notified ||= []
   end
 
-  def notify_observer(*args)
+  def self.notify_observer(*args)
     observers_notified << args
   end
 end
 
 class ParanoidModelWithoutObservers < ParanoidModel
-  remove_method :notify_observers if method_defined?(:notify_observers)
+  self.class.send(remove_method :notify_observers) if method_defined?(:notify_observers)
 end
