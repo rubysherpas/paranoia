@@ -310,8 +310,8 @@ class ParanoiaTest < Test::Unit::TestCase
     a.destroy
     a.restore!
 
-    assert a.observers_notified.select {|args| args.first == :before_restore}
-    assert a.observers_notified.select {|args| args.first == :after_restore}
+    assert a.observers_notified.select {|args| args == [:before_restore, a]}
+    assert a.observers_notified.select {|args| args == [:after_restore, a]}
   end
 
   def test_observers_not_notified_if_not_supported

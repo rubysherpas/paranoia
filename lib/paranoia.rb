@@ -96,10 +96,10 @@ class ActiveRecord::Base
     default_scope { where(self.quoted_table_name + ".#{paranoia_column} IS NULL") }
 
     before_restore {
-      self.class.notify_observers(:before_restore) if self.class.respond_to?(:notify_observers)
+      self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
     }
     after_restore {
-      self.class.notify_observers(:after_restore) if self.class.respond_to?(:notify_observers)
+      self.class.notify_observers(:after_restore, self) if self.class.respond_to?(:notify_observers)
     }
   end
 
