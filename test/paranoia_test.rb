@@ -305,6 +305,22 @@ class ParanoiaTest < Test::Unit::TestCase
     refute c.destroyed?
   end
 
+  def test_observers_notified
+    a = ParanoidModelWithObservers.create
+    a.destroy
+    a.restore!
+
+    assert a.observers_notified.select {|args| args.first == :before_restore}
+    assert a.observers_notified.select {|args| args.first == :after_restore}
+  end
+
+  def test_observers_not_notified_if_not_supported
+    a = ParanoidModelWithObservers.create
+    a.destroy
+    a.restore!
+    # essentially, we're just ensuring that this doesn't crash
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => 'not empty')
@@ -377,4 +393,18 @@ end
 
 class CustomColumnModel < ActiveRecord::Base
   acts_as_paranoid column: :destroyed_at
+end
+
+class ParanoidModelWithObservers < ParanoidModel
+  def observers_notified
+    @observers_notified ||= []
+  end
+
+  def notify_observer(*args)
+    observers_notified << args
+  end
+end
+
+class ParanoidModelWithoutObservers < ParanoidModel
+  remove_method :notify_observers if method_defined?(:notify_observers)
 end

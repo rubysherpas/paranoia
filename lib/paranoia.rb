@@ -94,6 +94,9 @@ class ActiveRecord::Base
 
     self.paranoia_column = options[:column] || :deleted_at
     default_scope { where(self.quoted_table_name + ".#{paranoia_column} IS NULL") }
+
+    before_restore { notify_observers(:before_restore) if respond_to?(:notify_observers) }
+    after_restore { notify_observers(:after_restore) if respond_to?(:notify_observers) }
   end
 
   def self.paranoid?
