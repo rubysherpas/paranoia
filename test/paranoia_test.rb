@@ -18,6 +18,7 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NU
 ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
 
 class ParanoiaTest < Test::Unit::TestCase
   def test_plain_model_class_is_not_paranoid
@@ -305,6 +306,34 @@ class ParanoiaTest < Test::Unit::TestCase
     refute c.destroyed?
   end
 
+  def test_restore_with_associations
+    parent = ParentModel.create
+    first_child = parent.very_related_models.create
+    second_child = parent.non_paranoid_models.create
+
+    parent.destroy
+    assert_equal false, parent.deleted_at.nil?
+    assert_equal false, first_child.reload.deleted_at.nil?
+    assert_equal true, second_child.destroyed?
+
+    parent.restore!
+    assert_equal true, parent.deleted_at.nil?
+    assert_equal false, first_child.reload.deleted_at.nil?
+    assert_equal true, second_child.destroyed?
+
+    parent.destroy
+    parent.restore(:recursive => true)
+    assert_equal true, parent.deleted_at.nil?
+    assert_equal true, first_child.reload.deleted_at.nil?
+    assert_equal true, second_child.destroyed?
+
+    parent.destroy
+    ParentModel.restore(parent.id, :recursive => true)
+    assert_equal true, parent.reload.deleted_at.nil?
+    assert_equal true, first_child.reload.deleted_at.nil?
+    assert_equal true, second_child.destroyed?
+  end
+
   def test_observers_notified
     a = ParanoidModelWithObservers.create
     a.destroy
@@ -366,6 +395,8 @@ end
 class ParentModel < ActiveRecord::Base
   acts_as_paranoid
   has_many :related_models
+  has_many :very_related_models, :class_name => 'RelatedModel', dependent: :destroy
+  has_many :non_paranoid_models, dependent: :destroy
 end
 
 class RelatedModel < ActiveRecord::Base
@@ -393,6 +424,9 @@ end
 
 class CustomColumnModel < ActiveRecord::Base
   acts_as_paranoid column: :destroyed_at
+end
+
+class NonParanoidModel < ActiveRecord::Base
 end
 
 class ParanoidModelWithObservers < ParanoidModel
