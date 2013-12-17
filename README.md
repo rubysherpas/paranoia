@@ -66,7 +66,22 @@ class Client < ActiveRecord::Base
 end
 ```
 
-Hey presto, it's there!
+Hey presto, it's there! Calling `destroy` will now set the `deleted_at` column:
+
+
+```
+>> client.deleted_at => nil
+>> client.destroy => client
+>> client.deleted_at => [current timestamp]
+```
+
+If you really want it gone, call `destroy` twice:
+
+```
+>> client.deleted_at => nil
+>> client.destroy => client
+>> client.destroy => client
+```
 
 If you want a method to be called on destroy, simply provide a _before\_destroy_ callback:
 
@@ -101,6 +116,50 @@ def product
   Product.unscoped { super }
 end
 ```
+
+If you want to find all records, even those which are deleted:
+
+```
+Client.with_deleted
+```
+
+If you want to find only the deleted records:
+
+```
+Client.only_deleted
+```
+
+If you want to check if a record is soft-deleted:
+
+```
+client.destroyed?
+```
+
+If you want to restore a record:
+
+```
+Client.restore(id)
+```
+
+If you want to restore a whole bunch of records:
+
+```
+Client.restore([id1, id2, ..., idN])
+```
+
+If you want to restore a record and their dependently destroyed associated records:
+
+```
+Client.restore(id, :restore => true)
+```
+
+If you want callbacks to trigger before a restore:
+
+```
+before_restore :callback_name_goes_here
+```
+
+For more information, please look at the tests.
 
 ## Acts As Paranoid Migration
 
