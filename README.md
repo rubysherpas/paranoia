@@ -94,6 +94,20 @@ class Client < ActiveRecord::Base
 end
 ```
 
+If you don't want your model to be scoped by default, you can pass a correspondent option:
+
+```ruby
+class Client < ActiveRecord::Base
+  acts_as_paranoid apply_default_scope: false
+
+  ...
+end
+
+...
+client.destroy
+Client.find(client.id) # no error
+```
+
 You can replace the older acts_as_paranoid methods as follows:
 
 | Old Syntax                 | New Syntax                     |

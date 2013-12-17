@@ -93,7 +93,11 @@ class ActiveRecord::Base
     class_attribute :paranoia_column
 
     self.paranoia_column = options[:column] || :deleted_at
-    default_scope { where(self.quoted_table_name + ".#{paranoia_column} IS NULL") }
+
+    apply_default_scope = options.key?(:apply_default_scope) ? options[:apply_default_scope] : true
+    if apply_default_scope
+      default_scope { where(self.quoted_table_name + ".#{paranoia_column} IS NULL") }
+    end
 
     before_restore {
       self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)

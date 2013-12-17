@@ -18,6 +18,7 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NU
 ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE unscoped_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 
 class ParanoiaTest < Test::Unit::TestCase
   def test_plain_model_class_is_not_paranoid
@@ -135,6 +136,17 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal 1, model.class.unscoped.count
     assert_equal 1, model.class.only_deleted.count
     assert_equal 1, model.class.deleted.count
+  end
+
+  def test_scoping_behaviour_for_unscoped_model
+    model = UnscopedModel.create!
+    model.destroy
+
+    assert model.destroyed?
+
+    assert_equal 1, model.class.count
+    assert_equal 0, model.class.where("deleted_at IS NULL").count
+    assert model.class.exists?(id: model.id)
   end
 
   def test_destroy_behavior_for_featureful_paranoid_models
@@ -393,6 +405,10 @@ end
 
 class CustomColumnModel < ActiveRecord::Base
   acts_as_paranoid column: :destroyed_at
+end
+
+class UnscopedModel < ActiveRecord::Base
+  acts_as_paranoid apply_default_scope: false
 end
 
 class ParanoidModelWithObservers < ParanoidModel
