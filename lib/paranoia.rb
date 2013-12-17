@@ -60,6 +60,7 @@ module Paranoia
       end
     end
   end
+  alias :restore :restore!
 
   def destroyed?
     !!send(paranoia_column)
