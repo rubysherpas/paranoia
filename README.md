@@ -119,43 +119,43 @@ end
 
 If you want to find all records, even those which are deleted:
 
-```
+```ruby
 Client.with_deleted
 ```
 
 If you want to find only the deleted records:
 
-```
+```ruby
 Client.only_deleted
 ```
 
 If you want to check if a record is soft-deleted:
 
-```
+```ruby
 client.destroyed?
 ```
 
 If you want to restore a record:
 
-```
+```ruby
 Client.restore(id)
 ```
 
 If you want to restore a whole bunch of records:
 
-```
+```ruby
 Client.restore([id1, id2, ..., idN])
 ```
 
 If you want to restore a record and their dependently destroyed associated records:
 
-```
+```ruby
 Client.restore(id, :restore => true)
 ```
 
 If you want callbacks to trigger before a restore:
 
-```
+```ruby
 before_restore :callback_name_goes_here
 ```
 
