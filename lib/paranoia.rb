@@ -16,11 +16,11 @@ module Paranoia
     end
     alias :deleted :only_deleted
 
-    def restore(id)
+    def restore(id, opts = {})
       if id.is_a?(Array)
-        id.map { |one_id| restore(one_id) }
+        id.map { |one_id| restore(one_id, opts) }
       else
-        only_deleted.find(id).restore!
+        only_deleted.find(id).restore!(opts)
       end
     end
   end
@@ -52,8 +52,13 @@ module Paranoia
     delete_or_soft_delete
   end
 
-  def restore!
-    run_callbacks(:restore) { update_column paranoia_column, nil }
+  def restore!(opts = {})
+    ActiveRecord::Base.transaction do
+      run_callbacks(:restore) do
+        update_column paranoia_column, nil
+        restore_associated_records if opts[:recursive]
+      end
+    end
   end
 
   def destroyed?
@@ -76,6 +81,22 @@ module Paranoia
       with_transaction_returning_status { touch(paranoia_column) }
     else
       touch(paranoia_column)
+    end
+  end
+
+  # restore associated records that have been soft deleted when
+  # we called #destroy
+  def restore_associated_records
+    destroyed_associations = self.class.reflect_on_all_associations.select do |association|
+      association.options[:dependent] == :destroy
+    end
+
+    destroyed_associations.each do |association|
+      association = send(association.name)
+
+      if association.paranoid?
+        association.only_deleted.each { |record| record.restore(:recursive => true) }
+      end
     end
   end
 end
