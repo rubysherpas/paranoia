@@ -94,6 +94,16 @@ class Client < ActiveRecord::Base
 end
 ```
 
+If you want to access soft-deleted associations, override the getter method:
+
+```ruby
+def product
+  Product.unscoped { super }
+end
+```
+
+## Acts As Paranoid Migration
+
 You can replace the older acts_as_paranoid methods as follows:
 
 | Old Syntax                 | New Syntax                     |
