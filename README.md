@@ -150,7 +150,7 @@ Client.restore([id1, id2, ..., idN])
 If you want to restore a record and their dependently destroyed associated records:
 
 ```ruby
-Client.restore(id, :restore => true)
+Client.restore(id, :recursive => true)
 ```
 
 If you want callbacks to trigger before a restore:
