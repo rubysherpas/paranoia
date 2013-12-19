@@ -10,6 +10,7 @@ FileUtils.rm_f DB_FILE
 ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => DB_FILE
 ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_never_delete_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
 ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
@@ -35,6 +36,10 @@ class ParanoiaTest < Test::Unit::TestCase
 
   def test_paranoid_models_are_paranoid
     assert_equal true, ParanoidModel.new.paranoid?
+  end
+
+  def test_paranoid_never_delete_models_are_paranoid
+    assert_equal true, ParanoidNeverDeleteModel.new.paranoid?
   end
 
   def test_paranoid_models_to_param
@@ -100,6 +105,18 @@ class ParanoiaTest < Test::Unit::TestCase
     model.destroy
 
     assert_equal false, model.deleted_at.nil?
+
+    assert_equal 0, model.class.count
+    assert_equal 1, model.class.unscoped.count
+  end
+
+  def test_destroy_behavior_for_paranoid_never_delete_models
+    model = ParanoidNeverDeleteModel.new
+    assert_equal 0, model.class.count
+    model.save!
+    assert_equal 1, model.class.count
+
+    2.times { model.destroy }
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
@@ -365,6 +382,10 @@ end
 class ParanoidModel < ActiveRecord::Base
   belongs_to :parent_model
   acts_as_paranoid
+end
+
+class ParanoidNeverDeleteModel < ActiveRecord::Base
+  acts_as_paranoid never_delete: true
 end
 
 class FeaturefulModel < ActiveRecord::Base
