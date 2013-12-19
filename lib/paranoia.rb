@@ -71,6 +71,7 @@ module Paranoia
   # select and exec delete or soft-delete.
   # @param with_transaction [Boolean] exec with ActiveRecord Transactions, when soft-delete.
   def delete_or_soft_delete(with_transaction=false)
+    return touch_paranoia_column(with_transaction) if never_delete
     destroyed? ? destroy! : touch_paranoia_column(with_transaction)
   end
 
@@ -108,7 +109,9 @@ class ActiveRecord::Base
     alias :delete!  :delete
     include Paranoia
     class_attribute :paranoia_column
+    class_attribute :never_delete
 
+    self.never_delete = options.fetch(:never_delete) { false }
     self.paranoia_column = options[:column] || :deleted_at
     default_scope { where(self.quoted_table_name + ".#{paranoia_column} IS NULL") }
 
