@@ -1,13 +1,15 @@
-require 'test/unit'
 require 'active_record'
+
+test_framework = if ActiveRecord::VERSION::STRING >= "4.1"
+  require 'minitest/autorun'
+  MiniTest::Test
+else
+  require 'test/unit'
+  Test::Unit::TestCase
+end
 require File.expand_path(File.dirname(__FILE__) + "/../lib/paranoia")
 
-DB_FILE = 'tmp/test_db'
-
-FileUtils.mkdir_p File.dirname(DB_FILE)
-FileUtils.rm_f DB_FILE
-
-ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => DB_FILE
+ActiveRecord::Base.establish_connection :adapter => 'sqlite3', database: ':memory:'
 ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
@@ -20,7 +22,7 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PR
 ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
 
-class ParanoiaTest < Test::Unit::TestCase
+class ParanoiaTest < test_framework
   def test_plain_model_class_is_not_paranoid
     assert_equal false, PlainModel.paranoid?
   end
@@ -44,7 +46,7 @@ class ParanoiaTest < Test::Unit::TestCase
 
     model.destroy
 
-    assert_not_equal nil, model.to_param
+    assert model.to_param
     assert_equal to_param, model.to_param
   end
 
