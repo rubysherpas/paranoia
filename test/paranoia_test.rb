@@ -1,13 +1,15 @@
-require 'test/unit'
 require 'active_record'
+
+test_framework = if ActiveRecord::VERSION::STRING >= "4.1"
+  require 'minitest/autorun'
+  MiniTest::Test
+else
+  require 'test/unit'
+  Test::Unit::TestCase
+end
 require File.expand_path(File.dirname(__FILE__) + "/../lib/paranoia")
 
-DB_FILE = 'tmp/test_db'
-
-FileUtils.mkdir_p File.dirname(DB_FILE)
-FileUtils.rm_f DB_FILE
-
-ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => DB_FILE
+ActiveRecord::Base.establish_connection :adapter => 'sqlite3', database: ':memory:'
 ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
@@ -20,7 +22,13 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PR
 ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
 
-class ParanoiaTest < Test::Unit::TestCase
+class ParanoiaTest < test_framework
+  def setup
+    ActiveRecord::Base.connection.tables.each do |table|
+      ActiveRecord::Base.connection.execute "DELETE FROM #{table}"
+    end
+  end
+
   def test_plain_model_class_is_not_paranoid
     assert_equal false, PlainModel.paranoid?
   end
@@ -44,7 +52,7 @@ class ParanoiaTest < Test::Unit::TestCase
 
     model.destroy
 
-    assert_not_equal nil, model.to_param
+    assert model.to_param
     assert_equal to_param, model.to_param
   end
 
@@ -106,7 +114,6 @@ class ParanoiaTest < Test::Unit::TestCase
   end
 
   def test_scoping_behavior_for_paranoid_models
-    ParanoidModel.unscoped.delete_all
     parent1 = ParentModel.create
     parent2 = ParentModel.create
     p1 = ParanoidModel.create(:parent_model => parent1)
@@ -267,9 +274,17 @@ class ParanoiaTest < Test::Unit::TestCase
   def test_real_destroy
     model = ParanoidModel.new
     model.save
-    model.destroy!
-
+    model.really_destroy!
     refute ParanoidModel.unscoped.exists?(model.id)
+  end
+
+  if ActiveRecord::VERSION::STRING < "4.1"
+    def test_real_destroy
+      model = ParanoidModel.new
+      model.save
+      model.destroy!
+      refute ParanoidModel.unscoped.exists?(model.id)
+    end
   end
 
   def test_real_delete
@@ -368,10 +383,6 @@ end
 
 # Helper classes
 
-class ParentModel < ActiveRecord::Base
-  has_many :paranoid_models
-end
-
 class ParanoidModel < ActiveRecord::Base
   belongs_to :parent_model
   acts_as_paranoid
@@ -404,6 +415,7 @@ end
 
 class ParentModel < ActiveRecord::Base
   acts_as_paranoid
+  has_many :paranoid_models
   has_many :related_models
   has_many :very_related_models, :class_name => 'RelatedModel', dependent: :destroy
   has_many :non_paranoid_models, dependent: :destroy
