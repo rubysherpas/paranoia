@@ -370,10 +370,6 @@ end
 
 # Helper classes
 
-class ParentModel < ActiveRecord::Base
-  has_many :paranoid_models
-end
-
 class ParanoidModel < ActiveRecord::Base
   belongs_to :parent_model
   acts_as_paranoid
@@ -406,6 +402,7 @@ end
 
 class ParentModel < ActiveRecord::Base
   acts_as_paranoid
+  has_many :paranoid_models
   has_many :related_models
   has_many :very_related_models, :class_name => 'RelatedModel', dependent: :destroy
   has_many :non_paranoid_models, dependent: :destroy
