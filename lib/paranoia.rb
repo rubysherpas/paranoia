@@ -51,6 +51,15 @@ module Paranoia
     run_callbacks(:destroy) { touch_paranoia_column(true) }
   end
 
+  # As of Rails 4.1.0 +destroy!+ will no longer remove the record from the db
+  # We need to override it here otherwise children records might be removed
+  # when thet shouldn't
+  if ActiveRecord::VERSION::STRING >= "4.1"
+    def destroy!
+      destroyed? ? super : destroy || raise(ActiveRecord::RecordNotDestroyed)
+    end
+  end
+
   def delete
     return if new_record?
     touch_paranoia_column(false)

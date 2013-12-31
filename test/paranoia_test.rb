@@ -23,6 +23,12 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INT
 ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
 
 class ParanoiaTest < test_framework
+  def setup
+    ActiveRecord::Base.connection.tables.each do |table|
+      ActiveRecord::Base.connection.execute "DELETE FROM #{table}"
+    end
+  end
+
   def test_plain_model_class_is_not_paranoid
     assert_equal false, PlainModel.paranoid?
   end
@@ -108,7 +114,6 @@ class ParanoiaTest < test_framework
   end
 
   def test_scoping_behavior_for_paranoid_models
-    ParanoidModel.unscoped.delete_all
     parent1 = ParentModel.create
     parent2 = ParentModel.create
     p1 = ParanoidModel.create(:parent_model => parent1)
@@ -266,12 +271,16 @@ class ParanoiaTest < test_framework
     assert model.instance_variable_get(:@restore_callback_called)
   end
 
-  def test_real_destroy
-    model = ParanoidModel.new
-    model.save
-    model.destroy!
+  # Only relevant to activerecord < 4.0 due to changes in
+  # Associations::HasManyAssociation see https://github.com/rails/rails/commit/5aab0c053832ded70a3a4b58cb97f8f8bba796ba
+  unless ActiveRecord::VERSION::STRING >= "4.1"
+    def test_real_destroy
+      model = ParanoidModel.new
+      model.save
+      model.destroy!
 
-    refute ParanoidModel.unscoped.exists?(model.id)
+      refute ParanoidModel.unscoped.exists?(model.id)
+    end
   end
 
   def test_real_delete
