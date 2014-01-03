@@ -350,6 +350,15 @@ class ParanoiaTest < Test::Unit::TestCase
     # essentially, we're just ensuring that this doesn't crash
   end
 
+  def test_i_am_the_destroyer
+    output = capture(:stdout) { ParanoidModel.I_AM_THE_DESTROYER! }
+    assert_equal %Q{
+      Sharon: "There should be a method called I_AM_THE_DESTROYER!"
+      Ryan:   "What should this method do?"
+      Sharon: "It should fix all the spelling errors on the page!"
+}, output
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")

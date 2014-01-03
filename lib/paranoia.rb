@@ -120,6 +120,17 @@ class ActiveRecord::Base
     }
   end
 
+  # Please do not use this method in production.
+  # Pretty please.
+  def self.I_AM_THE_DESTROYER!
+    # TODO: actually implement spelling error fixes
+    puts %Q{
+      Sharon: "There should be a method called I_AM_THE_DESTROYER!"
+      Ryan:   "What should this method do?"
+      Sharon: "It should fix all the spelling errors on the page!"
+}
+  end
+
   def self.paranoid? ; false ; end
   def paranoid? ; self.class.paranoid? ; end
 
