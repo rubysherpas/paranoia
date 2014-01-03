@@ -240,13 +240,14 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal false, model.destroyed?
   end
 
+  # Regression test for #92
   def test_destroy_twice
     model = ParanoidModel.new
     model.save
     model.destroy
     model.destroy
 
-    assert_equal 0, ParanoidModel.unscoped.where(id: model.id).count
+    assert_equal 1, ParanoidModel.unscoped.where(id: model.id).count
   end
 
   def test_restore_behavior_for_callbacks
