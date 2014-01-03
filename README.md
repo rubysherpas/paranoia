@@ -75,13 +75,11 @@ Hey presto, it's there! Calling `destroy` will now set the `deleted_at` column:
 >> client.deleted_at => [current timestamp]
 ```
 
-If you really want it gone, call `destroy` twice:
+If you really want it gone *gone*, call `destroy!`
 
 ```
 >> client.deleted_at => nil
->> client.destroy => client
->> client.destroy => client
-```
+>> client.destroy! => client
 
 If you want a method to be called on destroy, simply provide a _before\_destroy_ callback:
 
