@@ -80,8 +80,9 @@ If you really want it gone *gone*, call `destroy!`
 ```
 >> client.deleted_at => nil
 >> client.destroy! => client
+```
 
-If you want a method to be called on destroy, simply provide a _before\_destroy_ callback:
+If you want a method to be called on destroy, simply provide a `before_destroy` callback:
 
 ```ruby
 class Client < ActiveRecord::Base
@@ -97,7 +98,7 @@ class Client < ActiveRecord::Base
 end
 ```
 
-If you want to use a column other than deleted_at, you can pass it as an option:
+If you want to use a column other than `deleted_at`, you can pass it as an option:
 
 ```ruby
 class Client < ActiveRecord::Base
