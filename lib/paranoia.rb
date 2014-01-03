@@ -44,12 +44,12 @@ module Paranoia
   end
 
   def destroy
-    run_callbacks(:destroy) { delete_or_soft_delete(true) }
+    run_callbacks(:destroy) { touch_paranoia_column(true) }
   end
 
   def delete
     return if new_record?
-    delete_or_soft_delete
+    touch_paranoia_column(false)
   end
 
   def restore!(opts = {})
@@ -68,11 +68,6 @@ module Paranoia
   alias :deleted? :destroyed?
 
   private
-  # select and exec delete or soft-delete.
-  # @param with_transaction [Boolean] exec with ActiveRecord Transactions, when soft-delete.
-  def delete_or_soft_delete(with_transaction=false)
-    destroyed? ? destroy! : touch_paranoia_column(with_transaction)
-  end
 
   # touch paranoia column.
   # insert time to paranoia column.
@@ -104,8 +99,9 @@ end
 
 class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
-    alias :destroy! :destroy
-    alias :delete!  :delete
+    alias :ar_destroy :destroy
+    alias :destroy! :ar_destroy
+    alias :delete! :delete
     include Paranoia
     class_attribute :paranoia_column
 
