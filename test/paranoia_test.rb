@@ -271,16 +271,15 @@ class ParanoiaTest < test_framework
     assert model.instance_variable_get(:@restore_callback_called)
   end
 
-  # Only relevant to activerecord < 4.0 due to changes in
-  # Associations::HasManyAssociation see https://github.com/rails/rails/commit/5aab0c053832ded70a3a4b58cb97f8f8bba796ba
-  unless ActiveRecord::VERSION::STRING >= "4.1"
-    def test_real_destroy
-      model = ParanoidModel.new
-      model.save
-      model.destroy!
+  def test_real_destroy
+    model = ParanoidModel.new
+    model.save
 
-      refute ParanoidModel.unscoped.exists?(model.id)
-    end
+    # Only relevant to activerecord >= 4.1 due to changes in
+    # Associations::HasManyAssociation see https://github.com/rails/rails/commit/5aab0c053832ded70a3a4b58cb97f8f8bba796ba
+    model.touch :deleted_at if ActiveRecord::VERSION::STRING >= "4.1"
+    model.destroy!
+    refute ParanoidModel.unscoped.exists?(model.id)
   end
 
   def test_real_delete
