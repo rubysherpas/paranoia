@@ -274,12 +274,17 @@ class ParanoiaTest < test_framework
   def test_real_destroy
     model = ParanoidModel.new
     model.save
-
-    # Only relevant to activerecord >= 4.1 due to changes in
-    # Associations::HasManyAssociation see https://github.com/rails/rails/commit/5aab0c053832ded70a3a4b58cb97f8f8bba796ba
-    model.touch :deleted_at if ActiveRecord::VERSION::STRING >= "4.1"
-    model.destroy!
+    model.really_destroy!
     refute ParanoidModel.unscoped.exists?(model.id)
+  end
+
+  if ActiveRecord::VERSION::STRING < "4.1"
+    def test_real_destroy
+      model = ParanoidModel.new
+      model.save
+      model.destroy!
+      refute ParanoidModel.unscoped.exists?(model.id)
+    end
   end
 
   def test_real_delete
