@@ -6,6 +6,8 @@ You would use either plugin / gem if you wished that when you called `destroy` o
 
 If you wish to actually destroy an object you may call destroy! on it or simply call destroy twice on the same object.
 
+If a record has has_many associations defined AND those associations have dependent: :destroy set on them, then they will also be soft-deleted. If they don't have that, then they will not be deleted.
+
 ## Installation & Usage
 
 For Rails 3, please use version 1 of Paranoia:
