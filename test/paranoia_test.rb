@@ -14,6 +14,7 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGE
 ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE dependent_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME, dependent_delete BOOLEAN)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
@@ -335,6 +336,28 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal true, second_child.destroyed?
   end
 
+  def test_do_not_restore_model_that_was_destroyed_before_parent_destroyed.
+    parent = ParentModel.create
+    first_child = parent.dependent_models.create
+    second_child = parent.dependent_models.create
+
+    first_child.destroy
+    assert_equal false, first_child.reload.dependent_delete?
+    assert_equal false, first_child.reload.deleted_at.nil?
+
+    parent.destroy
+    assert_equal false, first_child.reload.dependent_delete?
+    assert_equal false, first_child.reload.deleted_at.nil?
+    assert_equal true,  second_child.reload.dependent_delete?
+    assert_equal false, second_child.reload.deleted_at.nil?
+
+    parent.restore!(:recursive => true)
+    assert_equal false, first_child.reload.dependent_delete?
+    assert_equal false, first_child.reload.deleted_at.nil?
+    assert_equal false, second_child.reload.dependent_delete?
+    assert_equal true,  second_child.reload.deleted_at.nil?
+  end
+
   def test_observers_notified
     a = ParanoidModelWithObservers.create
     a.destroy
@@ -398,9 +421,15 @@ class ParentModel < ActiveRecord::Base
   has_many :related_models
   has_many :very_related_models, :class_name => 'RelatedModel', dependent: :destroy
   has_many :non_paranoid_models, dependent: :destroy
+  has_many :dependent_models, dependent: :destroy
 end
 
 class RelatedModel < ActiveRecord::Base
+  acts_as_paranoid
+  belongs_to :parent_model
+end
+
+class DependentModel < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :parent_model
 end
