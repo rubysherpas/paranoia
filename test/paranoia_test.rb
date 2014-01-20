@@ -336,7 +336,7 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal true, second_child.destroyed?
   end
 
-  def test_do_not_restore_model_that_was_destroyed_before_parent_destroyed.
+  def test_do_not_restore_model_that_was_destroyed_before_parent_destroyed
     parent = ParentModel.create
     first_child = parent.dependent_models.create
     second_child = parent.dependent_models.create
