@@ -9,12 +9,13 @@ FileUtils.rm_f DB_FILE
 
 ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => DB_FILE
 ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE parent_one_to_one_models (id INTEGER NOT NULL PRIMARY KEY, dependent_model_id integer, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
 ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE dependent_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME, dependent_delete BOOLEAN)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE dependent_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, dependent_delete BOOLEAN)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
@@ -22,6 +23,12 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INT
 ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
 
 class ParanoiaTest < Test::Unit::TestCase
+  def setup
+    ParentModel.unscoped.each{|m| m.destroy!}
+    RelatedModel.unscoped.each{|m| m.destroy!}
+    DependentModel.unscoped.each{|m| m.destroy!}
+  end
+
   def test_plain_model_class_is_not_paranoid
     assert_equal false, PlainModel.paranoid?
   end
@@ -358,6 +365,28 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal true,  second_child.reload.deleted_at.nil?
   end
 
+  def test_can_destroy_and_restore_one_to_one_model
+    parent       = ParentOneToOneModel.create
+    first_child  = RelatedModel.create(parent_model_id: parent.id)
+    second_child = DependentModel.create
+    parent.update_column(:dependent_model_id, second_child.id)
+
+    # check relation of childlen.
+    parent.reload
+    assert_equal parent.related_model, first_child
+    assert_equal parent.dependent_model, second_child
+
+    parent.destroy
+    assert_equal false, parent.deleted_at.nil?
+    assert_equal false, first_child.reload.deleted_at.nil?
+    assert_equal true,  second_child.reload.destroyed?
+
+    parent.restore!(:recursive => true)
+    assert_equal true,  parent.deleted_at.nil?
+    assert_equal true,  first_child.reload.deleted_at.nil?
+    assert_equal false, second_child.reload.destroyed?
+  end
+
   def test_observers_notified
     a = ParanoidModelWithObservers.create
     a.destroy
@@ -422,6 +451,12 @@ class ParentModel < ActiveRecord::Base
   has_many :very_related_models, :class_name => 'RelatedModel', dependent: :destroy
   has_many :non_paranoid_models, dependent: :destroy
   has_many :dependent_models, dependent: :destroy
+end
+
+class ParentOneToOneModel < ActiveRecord::Base
+  acts_as_paranoid
+  has_one    :related_model,   :foreign_key => :parent_model_id, :dependent => :destroy
+  belongs_to :dependent_model, :dependent => :destroy
 end
 
 class RelatedModel < ActiveRecord::Base

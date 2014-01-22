@@ -77,32 +77,48 @@ module Paranoia
   # set dependent delete flg to associations.
   # @note This method will be called when run before_destroy event.
   def set_dependent_associations
-    each_paranoid_associations do |association|
-      if association.klass.column_names.include?(paranoia_dependent_column.to_s)
-        association.where(deleted_at: nil).update_all(paranoia_dependent_column => true)
+    each_paranoid_associations do |resource, resource_class, collection|
+      next unless resource_class.column_names.include?(paranoia_dependent_column.to_s)
+
+      if collection
+        resource.where(deleted_at: nil).update_all(paranoia_dependent_column => true)
+      else
+        resource.update_column(paranoia_dependent_column, true)
       end
     end
   end
 
   # exec block with each paranoid association.
-  # @param &block [Proc{|association| .. }] exec block.
+  # @param &block [Proc{|resource, resource_class, collection_flg| .. }] exec block.
   def each_paranoid_associations(&block)
-    self.class.reflect_on_all_associations.select do |association|
-      if association.options[:dependent] == :destroy
-        association = send(association.name)
-        block.call(association) if association.paranoid?
+    self.class.reflect_on_all_associations.each do |association|
+      next unless association.options[:dependent] == :destroy
+      next unless association.klass.paranoid?
+
+      resource = association.klass.unscoped do
+        if association.collection?
+          # Must call `order`, because rails4.0.2 and 3.2.3 have a bug. It disables `unscoped`.
+          send(association.name).order(:id)
+        else
+          send(association.name)
+        end
       end
+
+      next unless resource.present?
+      block.call(resource, association.klass, association.collection?)
     end
   end
 
   # restore associated records that have been soft deleted when
   # we called #destroy
   def restore_associated_records
-    each_paranoid_associations do |association|
-      association.only_deleted.each do |record|
-        if !record.respond_to?(paranoia_dependent_column) or record.send(paranoia_dependent_column)
-          record.restore(:recursive => true)
-        end
+    each_paranoid_associations do |resource, resource_class, collection|
+      resources = (collection) ? resource : [resource]
+
+      resources.each do |record|
+        next unless record.destroyed?
+        next if record.respond_to?(paranoia_dependent_column) and !record.send(paranoia_dependent_column)
+        record.restore(:recursive => true)
       end
     end
   end
