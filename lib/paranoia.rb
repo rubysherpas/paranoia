@@ -9,7 +9,6 @@ module Paranoia
       true
     end
 
-
     def with_deleted
       scoped.tap { |x| x.default_scoped = false }
     end
@@ -47,18 +46,21 @@ module Paranoia
   end
 
   def destroy
-    run_callbacks(:destroy) { touch_paranoia_column(true) }
+    with_transaction_returning_status do
+      run_callbacks(:destroy) { touch(paranoia_column) }
+    end
   end
 
   def delete
     return if new_record?
-    touch_paranoia_column(false)
+    touch(paranoia_column)
   end
 
   def restore!(opts = {})
     ActiveRecord::Base.transaction do
       run_callbacks(:restore) do
         update_column paranoia_column, nil
+        update_column paranoia_dependent_column, false if respond_to?(paranoia_dependent_column)
         restore_associated_records if opts[:recursive]
       end
     end
@@ -72,30 +74,51 @@ module Paranoia
   alias :deleted? :destroyed?
 
   private
+  # set dependent delete flg to associations.
+  # @note This method will be called when run before_destroy event.
+  def set_dependent_associations
+    each_paranoid_associations do |resource, resource_class, collection|
+      next unless resource_class.column_names.include?(paranoia_dependent_column.to_s)
 
-  # touch paranoia column.
-  # insert time to paranoia column.
-  # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
-  def touch_paranoia_column(with_transaction=false)
-    if with_transaction
-      with_transaction_returning_status { touch(paranoia_column) }
-    else
-      touch(paranoia_column)
+      if collection
+        resource.where(deleted_at: nil).update_all(paranoia_dependent_column => true)
+      else
+        resource.update_column(paranoia_dependent_column, true)
+      end
+    end
+  end
+
+  # exec block with each paranoid association.
+  # @param &block [Proc{|resource, resource_class, collection_flg| .. }] exec block.
+  def each_paranoid_associations(&block)
+    self.class.reflect_on_all_associations.each do |association|
+      next unless association.options[:dependent] == :destroy
+      next unless association.klass.paranoid?
+
+      resource = association.klass.unscoped do
+        if association.collection?
+          # Must call `order`, because rails4.0.2 and 3.2.3 have a bug. It disables `unscoped`.
+          send(association.name).order(:id)
+        else
+          send(association.name)
+        end
+      end
+
+      next unless resource.present?
+      block.call(resource, association.klass, association.collection?)
     end
   end
 
   # restore associated records that have been soft deleted when
   # we called #destroy
   def restore_associated_records
-    destroyed_associations = self.class.reflect_on_all_associations.select do |association|
-      association.options[:dependent] == :destroy
-    end
+    each_paranoid_associations do |resource, resource_class, collection|
+      resources = (collection) ? resource : [resource]
 
-    destroyed_associations.each do |association|
-      association = send(association.name)
-
-      if association.paranoid?
-        association.only_deleted.each { |record| record.restore(:recursive => true) }
+      resources.each do |record|
+        next unless record.destroyed?
+        next if record.respond_to?(paranoia_dependent_column) and !record.send(paranoia_dependent_column)
+        record.restore(:recursive => true)
       end
     end
   end
@@ -107,9 +130,10 @@ class ActiveRecord::Base
     alias :destroy! :ar_destroy
     alias :delete! :delete
     include Paranoia
-    class_attribute :paranoia_column
+    class_attribute :paranoia_column, :paranoia_dependent_column
 
     self.paranoia_column = options[:column] || :deleted_at
+    self.paranoia_dependent_column = options[:dependent_column] || :dependent_delete
     default_scope { where(self.quoted_table_name + ".#{paranoia_column} IS NULL") }
 
     before_restore {
@@ -118,6 +142,8 @@ class ActiveRecord::Base
     after_restore {
       self.class.notify_observers(:after_restore, self) if self.class.respond_to?(:notify_observers)
     }
+
+    before_destroy :set_dependent_associations
   end
 
   def self.paranoid?
@@ -139,5 +165,9 @@ class ActiveRecord::Base
 
   def paranoia_column
     self.class.paranoia_column
+  end
+
+  def paranoia_dependent_column
+    self.class.paranoia_dependent_column
   end
 end
