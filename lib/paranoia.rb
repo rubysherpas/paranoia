@@ -48,7 +48,8 @@ module Paranoia
   end
 
   def destroy
-    run_callbacks(:destroy) { touch_paranoia_column(true) }
+    callbacks_result = run_callbacks(:destroy) { touch_paranoia_column(true) }
+    callbacks_result ? self : false
   end
 
   # As of Rails 4.1.0 +destroy!+ will no longer remove the record from the db
