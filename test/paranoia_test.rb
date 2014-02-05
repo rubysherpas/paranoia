@@ -366,6 +366,19 @@ class ParanoiaTest < Test::Unit::TestCase
     # essentially, we're just ensuring that this doesn't crash
   end
 
+  def test_join_queries_work
+    parent = ParentModel.create
+    assert_equal 0, parent.related_models.count
+
+    child = parent.related_models.create
+    assert_equal 1, parent.related_models.count
+
+    child.destroy
+    assert_equal false, child.deleted_at.nil?
+    models = ParentModel.joins(:related_models).where(related_models: {id: child.id})
+    assert_equal [], models
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => 'not empty')
