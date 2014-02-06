@@ -47,7 +47,10 @@ module Paranoia
   end
 
   def destroy
-    callbacks_result = run_callbacks(:destroy) { touch_paranoia_column(true) }
+    callbacks_result = run_callbacks(:destroy) do
+      # don't update paranioa column unless it hasn't already been destroyed
+      touch_paranoia_column(true) unless destroyed?
+    end
     callbacks_result ? self : false
   end
 
@@ -59,8 +62,21 @@ module Paranoia
   def restore!(opts = {})
     ActiveRecord::Base.transaction do
       run_callbacks(:restore) do
+        deleted_at = send(paranoia_column)
         update_column paranoia_column, nil
-        restore_associated_records if opts[:recursive]
+        if opts[:recursive]
+          recovery_window_range = if opts[:dependent_recovery_window]
+                              # opts[:dependent_recovery_window] expected to be a timespan in seconds
+                              # e.g. 2.minutes
+                              #
+                              # now create the range
+                              (deleted_at-opts[:dependent_recovery_window]..deleted_at+opts[:dependent_recovery_window])
+                            else
+                              opts[:recovery_window_range]
+                            end
+          
+          restore_associated_records(recovery_window_range)
+        end
       end
     end
   end
@@ -87,7 +103,7 @@ module Paranoia
 
   # restore associated records that have been soft deleted when
   # we called #destroy
-  def restore_associated_records
+  def restore_associated_records(recovery_window_range = nil)
     destroyed_associations = self.class.reflect_on_all_associations.select do |association|
       association.options[:dependent] == :destroy
     end
@@ -96,7 +112,11 @@ module Paranoia
       association = send(association.name)
 
       if association.paranoid?
-        association.only_deleted.each { |record| record.restore(:recursive => true) }
+        association.only_deleted.select do |record|
+          recovery_window_range.nil? || recovery_window_range.cover?(record.send(record.paranoia_column))
+        end.each do |record|
+          record.restore(:recursive => true, :recovery_window_range => recovery_window_range)
+        end
       end
     end
   end
