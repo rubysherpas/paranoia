@@ -87,6 +87,19 @@ class ParanoiaTest < Test::Unit::TestCase
     assert !model.destroyed?
     assert !very_related_model.destroyed?
   end
+  
+  def test_join_applies_paranoid_behavior_to_both_models
+    ParentModel.unscoped.delete_all
+    assert_equal 0, ParentModel.count 
+    model = ParentModel.create
+    model.related_models.create
+    model.related_models.create
+    first_related_model_id = model.related_models.first.id
+    
+    assert_equal 1, ParentModel.joins(:related_models).where(related_models: {id: first_related_model_id}).count
+    model.related_models.first.destroy
+    assert_equal 0, ParentModel.joins(:related_models).where(related_models: {id: first_related_model_id}).count
+  end
 
   def test_delete_behavior_for_plain_models_callbacks
     model = CallbackModel.new
