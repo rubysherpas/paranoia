@@ -79,7 +79,7 @@ If you really want it gone *gone*, call `really_destroy!`
 
 ```
 >> client.deleted_at => nil
->> client.real_destroy! => client
+>> client.really_destroy! => client
 ```
 
 If you want a method to be called on destroy, simply provide a `before_destroy` callback:
