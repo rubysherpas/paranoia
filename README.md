@@ -43,7 +43,7 @@ Updating is as simple as `bundle update paranoia`.
 Run:
 
 ```shell
-rails generate migration AddDeletedAtToClients deleted_at:datetime
+rails generate migration AddDeletedAtToClients deleted_at:datetime:index
 ```
 
 and now you have a migration
@@ -52,6 +52,7 @@ and now you have a migration
 class AddDeletedAtToClients < ActiveRecord::Migration
   def change
     add_column :clients, :deleted_at, :datetime
+    add_index :clients, :deleted_at
   end
 end
 ```
