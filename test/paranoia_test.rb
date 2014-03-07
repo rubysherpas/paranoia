@@ -10,6 +10,7 @@ FileUtils.rm_f DB_FILE
 ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => DB_FILE
 ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
 ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
@@ -350,6 +351,40 @@ class ParanoiaTest < Test::Unit::TestCase
     assert_equal true, second_child.destroyed?
   end
 
+  # regression tests for #118
+  def test_restore_with_has_one_association
+    # setup and destroy test objects
+    hasOne = ParanoidModelWithHasOne.create
+    belongsTo = ParanoidModelWithBelong.create
+    hasOne.paranoid_model_with_belong = belongsTo
+    hasOne.save!
+
+    hasOne.destroy
+    assert_equal false, hasOne.deleted_at.nil?
+    assert_equal false, belongsTo.deleted_at.nil?
+
+    # Does it restore has_one associations?
+    hasOne.restore(:recursive => true)
+    hasOne.save!
+
+    assert_equal true, hasOne.reload.deleted_at.nil?
+    assert_equal true, belongsTo.reload.deleted_at.nil?, "#{belongsTo.deleted_at}"
+    assert ParanoidModelWithBelong.with_deleted.reload.count != 0, "There should be a record"
+  end
+
+  def test_restore_with_nil_has_one_association
+    # setup and destroy test object
+    hasOne = ParanoidModelWithHasOne.create
+    hasOne.destroy
+    assert_equal false, hasOne.reload.deleted_at.nil?
+
+    # Does it raise NoMethodException on restore of nil
+    assert_nothing_raised do
+      hasOne.restore(:recursive => true)
+    end
+    assert hasOne.reload.deleted_at.nil?
+  end
+
   def test_observers_notified
     a = ParanoidModelWithObservers.create
     a.destroy
@@ -464,4 +499,14 @@ end
 
 class ParanoidModelWithoutObservers < ParanoidModel
   self.class.send(remove_method :notify_observers) if method_defined?(:notify_observers)
+end
+
+# refer back to regression test for #118
+class ParanoidModelWithHasOne < ParanoidModel
+  has_one :paranoid_model_with_belong, :dependent => :destroy
+end
+
+class ParanoidModelWithBelong < ActiveRecord::Base
+  acts_as_paranoid
+  belongs_to :paranoid_model_with_has_one
 end
