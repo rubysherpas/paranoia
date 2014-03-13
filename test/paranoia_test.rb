@@ -8,7 +8,7 @@ FileUtils.mkdir_p File.dirname(DB_FILE)
 FileUtils.rm_f DB_FILE
 
 ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => DB_FILE
-ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, related_models_count INTEGER)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
@@ -173,6 +173,8 @@ class ParanoiaTest < Test::Unit::TestCase
   end
 
   def test_default_scope_for_has_many_relationships
+    RelatedModel.unscoped.delete_all # cleanup
+    
     parent = ParentModel.create
     assert_equal 0, parent.related_models.count
 
@@ -400,6 +402,38 @@ class ParanoiaTest < Test::Unit::TestCase
     a.restore!
     # essentially, we're just ensuring that this doesn't crash
   end
+  
+  def test_counter_cache_when_restoring_parent
+    parent = ParentModel.create
+    parent.very_related_models.create # create child
+
+    parent.reload
+    assert_equal 1, parent.related_models_count
+
+    parent.destroy
+    parent.restore! #non-recursive, so child sould not be restored
+
+    parent.reload
+    assert_equal 0, parent.related_models_count
+  end
+
+  def test_counter_cache_when_restoring_child
+    parent = ParentModel.create
+    child = parent.very_related_models.create
+
+    parent.reload
+    assert_equal 1, parent.related_models_count
+
+    # destroy child and check counter cache on parent
+    child.destroy
+    parent.reload
+    assert_equal 0, parent.related_models_count
+
+    # restore child and check
+    child.restore!
+    parent.reload
+    assert_equal 1, parent.related_models_count
+  end
 
   private
   def get_featureful_model
@@ -459,7 +493,7 @@ end
 
 class RelatedModel < ActiveRecord::Base
   acts_as_paranoid
-  belongs_to :parent_model
+  belongs_to :parent_model, :counter_cache => true
 end
 
 class Employer < ActiveRecord::Base
