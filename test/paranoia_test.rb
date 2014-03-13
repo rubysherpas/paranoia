@@ -387,6 +387,47 @@ class ParanoiaTest < test_framework
     assert ParanoidModelWithBelong.with_deleted.reload.count != 0, "There should be a record"
   end
 
+  def test_new_restore_with_has_one_association
+    # setup and destroy test objects
+    hasOne = ParanoidModelWithHasOne.create
+    belongsTo = ParanoidModelWithBelong.create
+    hasOne.paranoid_model_with_belong = belongsTo
+    hasOne.save!
+
+    hasOne.destroy
+    assert_equal false, hasOne.deleted_at.nil?
+    assert_equal false, belongsTo.deleted_at.nil?
+
+    # Does it restore has_one associations?
+    newHasOne = ParanoidModelWithHasOne.with_deleted.find(hasOne.id)
+    newHasOne.restore(:recursive => true)
+    newHasOne.save!
+
+    assert_equal true, hasOne.reload.deleted_at.nil?
+    assert_equal true, belongsTo.reload.deleted_at.nil?, "#{belongsTo.deleted_at}"
+    assert ParanoidModelWithBelong.with_deleted.reload.count != 0, "There should be a record"
+  end
+
+  def test_model_restore_with_has_one_association
+    # setup and destroy test objects
+    hasOne = ParanoidModelWithHasOne.create
+    belongsTo = ParanoidModelWithBelong.create
+    hasOne.paranoid_model_with_belong = belongsTo
+    hasOne.save!
+
+    hasOne.destroy
+    assert_equal false, hasOne.deleted_at.nil?
+    assert_equal false, belongsTo.deleted_at.nil?
+
+    # Does it restore has_one associations?
+    ParanoidModelWithHasOne.restore(hasOne.id, :recursive => true)
+    hasOne.save!
+
+    assert_equal true, hasOne.reload.deleted_at.nil?
+    assert_equal true, belongsTo.reload.deleted_at.nil?, "#{belongsTo.deleted_at}"
+    assert ParanoidModelWithBelong.with_deleted.reload.count != 0, "There should be a record"
+  end
+
   def test_restore_with_nil_has_one_association
     # setup and destroy test object
     hasOne = ParanoidModelWithHasOne.create
