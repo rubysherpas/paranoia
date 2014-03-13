@@ -114,6 +114,10 @@ module Paranoia
           end
         end
       end
+
+      if association_data.nil? && association.macro.to_s == "has_one"
+        Object.const_get(association.name.to_s.camelize).only_deleted.where("#{self.class.name.to_s.underscore}_id", self.id).first.try(:restore, recursive: true)
+      end
     end
   end
 end
