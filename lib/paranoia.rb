@@ -1,3 +1,5 @@
+require 'active_record' unless defined? ActiveRecord
+
 module Paranoia
   def self.included(klazz)
     klazz.extend Query
