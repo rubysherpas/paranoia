@@ -150,3 +150,5 @@ class ActiveRecord::Base
     self.class.paranoia_column
   end
 end
+
+require 'paranoia/rspec' if defined? RSpec
