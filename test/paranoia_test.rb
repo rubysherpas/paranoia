@@ -303,7 +303,18 @@ class ParanoiaTest < Test::Unit::TestCase
     parent.really_destroy!
     refute RelatedModel.unscoped.exists?(child.id)
   end
-  
+
+  def test_real_destroy_dependent_destroy_after_normal_destroy_does_not_delete_other_children
+    parent_1 = ParentModel.create
+    child_1 = parent_1.very_related_models.create
+
+    parent_2 = ParentModel.create
+    child_2 = parent_2.very_related_models.create
+    parent_1.destroy
+    parent_1.really_destroy!
+    assert RelatedModel.unscoped.exists?(child_2.id)
+  end
+
   def test_real_delete
     model = ParanoidModel.new
     model.save
