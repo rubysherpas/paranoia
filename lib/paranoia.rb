@@ -80,10 +80,15 @@ module Paranoia
   # insert time to paranoia column.
   # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
   def touch_paranoia_column(with_transaction=false)
-    if with_transaction
-      with_transaction_returning_status { touch(paranoia_column) }
-    else
-      touch(paranoia_column)
+    # This method is (potentially) called from really_destroy
+    # The object the method is being called on may be frozen
+    # Let's not touch it if it's frozen.
+    unless self.frozen?
+      if with_transaction
+        with_transaction_returning_status { touch(paranoia_column) }
+      else
+        touch(paranoia_column)
+      end
     end
   end
 
@@ -115,6 +120,18 @@ class ActiveRecord::Base
     alias :ar_destroy :destroy
     alias :destroy! :ar_destroy
     alias :delete! :delete
+    def really_destroy!
+      dependent_reflections = self.reflections.select do |name, reflection|
+        reflection.options[:dependent] == :destroy
+      end
+      if dependent_reflections.any?
+        dependent_reflections.each do |name, _|
+          self.send(name).each(&:really_destroy!)
+        end
+      end
+      destroy!
+    end
+
     include Paranoia
     class_attribute :paranoia_column
 

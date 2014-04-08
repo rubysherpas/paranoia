@@ -281,12 +281,19 @@ class ParanoiaTest < Test::Unit::TestCase
     assert model.instance_variable_get(:@restore_callback_called)
   end
 
-  def test_real_destroy
+  def test_really_destroy
     model = ParanoidModel.new
     model.save
     model.destroy!
 
     assert_equal 0, ParanoidModel.unscoped.where(id: model.id).count
+  end
+
+  def test_real_destroy_dependent_destroy
+    parent = ParentModel.create
+    child = parent.very_related_models.create
+    parent.really_destroy!
+    refute RelatedModel.unscoped.exists?(child.id)
   end
 
   def test_real_delete
