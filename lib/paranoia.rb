@@ -135,7 +135,7 @@ class ActiveRecord::Base
       end
       if dependent_reflections.any?
         dependent_reflections.each do |name, _|
-          self.send(name).each(&:really_destroy!)
+          self.send(name).unscoped.each(&:really_destroy!)
         end
       end
       destroy!
