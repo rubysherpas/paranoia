@@ -135,7 +135,10 @@ class ActiveRecord::Base
       end
       if dependent_reflections.any?
         dependent_reflections.each do |name, _|
-          self.send(name).unscoped.each(&:really_destroy!)
+          associated_records = self.send(name)
+          # Paranoid models will have this method, non-paranoid models will not
+          associated_records = associated_records.with_deleted if associated_records.respond_to?(:with_deleted)
+          associated_records.each(&:really_destroy!)
         end
       end
       destroy!
