@@ -7,5 +7,5 @@ rvm:
   - rbx
 
 env:
-  - RAILS='~> 4.0.2'
-  - RAILS='~> 4.1.0.beta1'
+  - RAILS='~> 4.0.4'
+  - RAILS='~> 4.1.0'

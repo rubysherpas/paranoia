@@ -287,11 +287,37 @@ class ParanoiaTest < test_framework
     assert model.instance_variable_get(:@restore_callback_called)
   end
 
-  def test_real_destroy
+  def test_really_destroy
     model = ParanoidModel.new
     model.save
     model.really_destroy!
     refute ParanoidModel.unscoped.exists?(model.id)
+  end
+
+  def test_real_destroy_dependent_destroy
+    parent = ParentModel.create
+    child = parent.very_related_models.create
+    parent.really_destroy!
+    refute RelatedModel.unscoped.exists?(child.id)
+  end
+
+  def test_real_destroy_dependent_destroy_after_normal_destroy
+    parent = ParentModel.create
+    child = parent.very_related_models.create
+    parent.destroy
+    parent.really_destroy!
+    refute RelatedModel.unscoped.exists?(child.id)
+  end
+
+  def test_real_destroy_dependent_destroy_after_normal_destroy_does_not_delete_other_children
+    parent_1 = ParentModel.create
+    child_1 = parent_1.very_related_models.create
+
+    parent_2 = ParentModel.create
+    child_2 = parent_2.very_related_models.create
+    parent_1.destroy
+    parent_1.really_destroy!
+    assert RelatedModel.unscoped.exists?(child_2.id)
   end
 
   if ActiveRecord::VERSION::STRING < "4.1"
