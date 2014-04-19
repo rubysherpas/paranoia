@@ -123,7 +123,9 @@ module Paranoia
       end
 
       if association_data.nil? && association.macro.to_s == "has_one"
-        Object.const_get(association.name.to_s.camelize).only_deleted.where("#{self.class.name.to_s.underscore}_id", self.id).first.try(:restore, recursive: true)
+        association_class_name = association.options[:class_name].present? ? association.options[:class_name] : association.name.to_s.camelize
+        association_foreign_key = association.options[:foreign_key].present? ? association.options[:foreign_key] : "#{self.class.name.to_s.underscore}_id"
+        Object.const_get(association_class_name).only_deleted.where(association_foreign_key, self.id).first.try(:restore, recursive: true)
       end
     end
   end
