@@ -117,6 +117,7 @@ end
 
 class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
+    alias :really_destroyed? :destroyed?
     alias :ar_destroy :destroy
     alias :destroy! :ar_destroy
     alias :delete! :delete
