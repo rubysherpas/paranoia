@@ -115,6 +115,34 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.unscoped.count
   end
 
+  def test_delete_behavior_for_paranoid_models
+    model = ParanoidModel.new
+    assert_equal 0, model.class.count
+    model.save!
+    assert_equal 1, model.class.count
+    model.delete
+
+    assert_equal false, model.deleted_at.nil?
+
+    assert_equal 0, model.class.count
+    assert_equal 1, model.class.unscoped.count
+  end
+
+  def test_destroy_all_behavior_for_paranoid_models
+    model = ParanoidModel.new
+    model2 = ParanoidModel.new
+    assert_equal 0, model.class.count
+    model.save!
+    model2.save!
+    assert_equal 2, model.class.count
+    ParanoidModel.destroy_all
+
+    assert_equal false, model.reload.deleted_at.nil?
+
+    assert_equal 0, model.class.count
+    assert_equal 2, model.class.unscoped.count
+  end
+
   def test_scoping_behavior_for_paranoid_models
     parent1 = ParentModel.create
     parent2 = ParentModel.create
