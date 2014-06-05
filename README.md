@@ -178,6 +178,9 @@ You can replace the older `acts_as_paranoid` methods as follows:
 |`find_with_deleted(:first)` | `Client.with_deleted.first`    |
 |`find_with_deleted(id)`     | `Client.with_deleted.find(id)` |
 
+The `recover` method in `acts_as_paranoid` runs `update` callbacks.  Paranoia's
+`restore` method does not do this.
+
 ## License
 
 This gem is released under the MIT license.
