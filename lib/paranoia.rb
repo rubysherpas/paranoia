@@ -111,6 +111,11 @@ module Paranoia
   # insert time to paranoia column.
   # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
   def touch_paranoia_column(with_transaction=false)
+	  # Sometimes paranoid objects are created by has_one relationships; they are
+	  # never persisted to the database, so touching the column would raise an
+	  # exception from ActiveRecord.
+	  return unless persisted?
+
     # This method is (potentially) called from really_destroy
     # The object the method is being called on may be frozen
     # Let's not touch it if it's frozen.
