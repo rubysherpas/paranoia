@@ -420,9 +420,8 @@ class ParanoiaTest < test_framework
     assert_equal false, hasOne.reload.deleted_at.nil?
 
     # Does it raise NoMethodException on restore of nil
-    assert_nothing_raised do
-      hasOne.restore(:recursive => true)
-    end
+    hasOne.restore(:recursive => true)
+    
     assert hasOne.reload.deleted_at.nil?
   end
 
