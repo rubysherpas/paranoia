@@ -100,9 +100,7 @@ module Paranoia
     # This method is (potentially) called from really_destroy
     # The object the method is being called on may be frozen
     # Let's not touch it if it's frozen.
-    unless self.frozen?
-      params = {paranoia_column => Time.now}
-      params[paranoia_flag_column] = true if paranoia_flag_column
+    unless self.frozen?      
       if with_transaction
         with_transaction_returning_status do
           update_column(paranoia_flag_column, true) if paranoia_flag_column
