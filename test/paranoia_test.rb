@@ -463,8 +463,8 @@ class ParanoiaTest < test_framework
     assert_equal 1, FlaggedModelWithCustomIndex.count
     a.destroy
     assert_equal 0, FlaggedModelWithCustomIndex.count
-    assert FlaggedModelWithCustomIndex.all.to_sql.index FlaggedModelWithCustomIndex.paranoia_indexed_column.to_s
-    assert !FlaggedModelWithCustomIndex.all.to_sql.index FlaggedModelWithCustomIndex.paranoia_column.to_s
+    assert FlaggedModelWithCustomIndex.all.to_sql.index(FlaggedModelWithCustomIndex.paranoia_indexed_column.to_s)
+    assert !FlaggedModelWithCustomIndex.all.to_sql.index( FlaggedModelWithCustomIndex.paranoia_column.to_s)
   end
 
 
