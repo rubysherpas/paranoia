@@ -180,8 +180,7 @@ You can replace the older `acts_as_paranoid` methods as follows:
 
 ## Support for Unique Keys with Null Values
 
-With most databases, a unique key will not be enforced when it contains a
-nullable value because each row's null will be treated unique.
+With most databases, a unique key containing a null value will not be enforced because the null value is unique per row.
 
 ``` ruby
 class AddDeletedAtToClients < ActiveRecord::Migration
