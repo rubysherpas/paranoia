@@ -11,14 +11,14 @@ module Paranoia
 
     def with_deleted
       if ActiveRecord::VERSION::STRING >= "4.1"
-        unscope where: paranoia_column
+        unscope where: paranoia_indexed_column
       else
         all.tap { |x| x.default_scoped = false }
       end
     end
 
     def only_deleted
-      with_deleted.where.not(paranoia_column => nil)
+      with_deleted.where.not(paranoia_indexed_column => paranoia_false_value)
     end
     alias :deleted :only_deleted
 
@@ -28,6 +28,12 @@ module Paranoia
       else
         only_deleted.find(id).restore!(opts)
       end
+    end
+
+    private
+
+    def paranoia_false_value
+      (paranoia_indexed_column == paranoia_column) ? nil : 0
     end
   end
 
@@ -73,6 +79,7 @@ module Paranoia
     ActiveRecord::Base.transaction do
       run_callbacks(:restore) do
         update_column paranoia_column, nil
+        update_column(paranoia_flag_column, false) if paranoia_flag_column
         restore_associated_records if opts[:recursive]
       end
     end
@@ -86,7 +93,12 @@ module Paranoia
 
   private
 
-  # touch paranoia column.
+  def mark_columns_deleted
+    update_column(paranoia_flag_column, true) if paranoia_flag_column
+    touch(paranoia_column)
+  end
+
+  # touch paranoia column, update flag column if necessary
   # insert time to paranoia column.
   # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
   def touch_paranoia_column(with_transaction=false)
@@ -95,9 +107,11 @@ module Paranoia
     # Let's not touch it if it's frozen.
     unless self.frozen?
       if with_transaction
-        with_transaction_returning_status { touch(paranoia_column) }
+        with_transaction_returning_status do
+          mark_columns_deleted
+        end
       else
-        touch(paranoia_column)
+        mark_columns_deleted
       end
     end
   end
@@ -146,9 +160,13 @@ class ActiveRecord::Base
 
     include Paranoia
     class_attribute :paranoia_column
+    class_attribute :paranoia_flag_column
+    class_attribute :paranoia_indexed_column
 
     self.paranoia_column = options[:column] || :deleted_at
-    default_scope { where(paranoia_column => nil) }
+    self.paranoia_flag_column = options[:flag_column] || nil
+    self.paranoia_indexed_column = options[:indexed_column] || paranoia_column
+    default_scope { where(paranoia_indexed_column => paranoia_false_value) }
 
     before_restore {
       self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
@@ -180,6 +198,14 @@ class ActiveRecord::Base
   end
 
   private
+
+  def paranoia_flag_column
+    self.class.paranoia_flag_column
+  end
+
+  def paranoia_indexed_column
+    self.class.paranoia_indexed_column
+  end
 
   def paranoia_column
     self.class.paranoia_column
