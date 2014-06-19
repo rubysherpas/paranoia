@@ -93,6 +93,11 @@ module Paranoia
 
   private
 
+  def mark_columns_deleted
+    update_column(paranoia_flag_column, true) if paranoia_flag_column
+    touch(paranoia_column)
+  end
+
   # touch paranoia column, update flag column if necessary
   # insert time to paranoia column.
   # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
@@ -100,15 +105,13 @@ module Paranoia
     # This method is (potentially) called from really_destroy
     # The object the method is being called on may be frozen
     # Let's not touch it if it's frozen.
-    unless self.frozen?      
+    unless self.frozen?
       if with_transaction
         with_transaction_returning_status do
-          update_column(paranoia_flag_column, true) if paranoia_flag_column
-          touch(paranoia_column)
+          mark_columns_deleted
         end
       else
-        update_column(paranoia_flag_column, true) if paranoia_flag_column
-        touch(paranoia_column)
+        mark_columns_deleted
       end
     end
   end
