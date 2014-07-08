@@ -9,7 +9,7 @@ platforms :rbx do
   gem 'rubinius-developer_tools'
 end
 
-rails = ENV['RAILS'] || '~> 4.0.2'
+rails = ENV['RAILS'] || '~> 4.1.4'
 
 gem 'rails', rails
 
