@@ -99,7 +99,7 @@ class ParanoiaTest < test_framework
     assert_equal nil, model.instance_variable_get(:@validate_called)
     assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
     assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
-    assert_equal nil, model.instance_variable_get(:@after_commit_callback_called)
+    assert model.instance_variable_get(:@after_commit_callback_called)
   end
 
   def test_destroy_behavior_for_paranoid_models
