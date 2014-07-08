@@ -153,8 +153,10 @@ class ActiveRecord::Base
           # Paranoid models will have this method, non-paranoid models will not
           associated_records = associated_records.with_deleted if associated_records.respond_to?(:with_deleted)
           associated_records.each(&:really_destroy!)
+          self.send(name).reload
         end
       end
+      touch_paranoia_column if ActiveRecord::VERSION::STRING >= "4.1"
       destroy!
     end
 
