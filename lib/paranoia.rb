@@ -144,7 +144,7 @@ class ActiveRecord::Base
     alias :destroy! :destroy
     alias :delete! :delete
     def really_destroy!
-      dependent_reflections = self.reflections.select do |name, reflection|
+      dependent_reflections = self.class.reflections.select do |name, reflection|
         reflection.options[:dependent] == :destroy
       end
       if dependent_reflections.any?
