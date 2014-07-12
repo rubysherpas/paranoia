@@ -23,6 +23,7 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NU
 ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE flagged_model_with_uniques (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, is_deleted tinyint(1) not null default 0, name VARCHAR(32), UNIQUE(name, is_deleted))'
 
 class ParanoiaTest < test_framework
   def setup
@@ -457,6 +458,20 @@ class ParanoiaTest < test_framework
     assert_equal false, a.deleted?
   end
 
+  def test_multiple_destroy_flagged_model_with_unique
+    a = FlaggedModelWithUnique.create(:name => 'same_name')
+    assert_equal false, a.is_deleted?
+
+    a.destroy
+    assert_equal true, a.is_deleted?
+
+    b = FlaggedModelWithUnique.create(:name => 'same_name')
+    assert_equal false, b.is_deleted?
+
+    b.destroy
+    assert_equal true, b.is_deleted?
+  end
+
   def test_uses_flagged_index
     a = FlaggedModelWithCustomIndex.create(is_deleted: 0)
     assert_equal 1, FlaggedModelWithCustomIndex.count
@@ -589,4 +604,8 @@ end
 
 class FlaggedModelWithCustomIndex < PlainModel
   acts_as_paranoid :flag_column => :is_deleted, :indexed_column => :is_deleted
+end
+
+class FlaggedModelWithUnique < ActiveRecord::Base
+  acts_as_paranoid :flag_column => :is_deleted
 end
