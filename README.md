@@ -193,13 +193,13 @@ end
 
 Given the migration above, you could have multiple users with username bob given the following inserts: ('bob', null), ('bob', null), ('bob', null). We can agree this is not the expected behavior.
 
-To avoid this problem, we could use a flag column instead of a datetime, but the datetime value has intrinsic usefulness.  Instead, we can add a second column for the unique key that always has a value, in this case 0 or 1:
+To avoid this problem, we could use a flag column instead of a datetime, but the datetime value has intrinsic usefulness.  Instead, we can add a second column for the unique key that always has a value, in this case 0 or 1+:
 
 ``` ruby
 class AddDeletedAtToClients < ActiveRecord::Migration
   def change
     add_column :clients, :deleted_at, :datetime
-    add_column :clients, :is_deleted, :boolean, null: false, default: 0
+    add_column :clients, :is_deleted, :integer, null: false, default: 0
     add_index :clients, [:username, :is_deleted], unique: true
   end
 end
