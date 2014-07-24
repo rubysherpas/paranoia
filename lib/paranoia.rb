@@ -56,7 +56,11 @@ module Paranoia
   end
 
   def destroy
-    callbacks_result = run_callbacks(:destroy) { touch_paranoia_column(true) }
+    callbacks_result = transaction do
+      run_callbacks(:destroy) do
+        touch_paranoia_column
+      end
+    end
     callbacks_result ? self : false
   end
 
