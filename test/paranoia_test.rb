@@ -18,6 +18,7 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT
 ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE fail_callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE asplode_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
@@ -476,6 +477,27 @@ class ParanoiaTest < test_framework
 }, output
   end
 
+  def test_destroy_fails_if_callback_raises_exception
+    parent = AsplodeModel.create
+
+    assert_raises(StandardError) { parent.destroy }
+
+    #transaction should be rolled back, so parent NOT deleted
+    refute parent.destroyed?, 'Parent record was destroyed, even though AR callback threw exception'
+  end
+
+  def test_destroy_fails_if_association_callback_raises_exception
+    parent = ParentModel.create
+    children = []
+    3.times { children << parent.asplode_models.create }
+
+    assert_raises(StandardError) { parent.destroy }
+
+    #transaction should be rolled back, so parent and children NOT deleted
+    refute parent.destroyed?, 'Parent record was destroyed, even though AR callback threw exception'
+    refute children.any?(&:destroyed?), 'Child record was destroyed, even though AR callback threw exception'
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
@@ -527,6 +549,7 @@ class ParentModel < ActiveRecord::Base
   has_many :related_models
   has_many :very_related_models, :class_name => 'RelatedModel', dependent: :destroy
   has_many :non_paranoid_models, dependent: :destroy
+  has_many :asplode_models, dependent: :destroy
 end
 
 class RelatedModel < ActiveRecord::Base
@@ -589,4 +612,11 @@ end
 
 class FlaggedModelWithCustomIndex < PlainModel
   acts_as_paranoid :flag_column => :is_deleted, :indexed_column => :is_deleted
+end
+
+class AsplodeModel < ActiveRecord::Base
+  acts_as_paranoid
+  before_destroy do |r|
+    raise StandardError, 'ASPLODE!'
+  end
 end
