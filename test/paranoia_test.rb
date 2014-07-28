@@ -202,6 +202,13 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.unscoped.count
   end
 
+  def test_destroy_behaviour_for_unpersisted_models
+		model = ParanoidModel.new
+		model.destroy
+
+		# No assertion because we just want to ensure that ActiveRecord does not complain.
+  end
+
   # Regression test for #24
   def test_chaining_for_paranoid_models
     scope = FeaturefulModel.where(:name => "foo").only_deleted
