@@ -80,7 +80,7 @@ module Paranoia
   end
 
   def restore!(opts = {})
-    ActiveRecord::Base.transaction do
+    self.class.transaction do
       run_callbacks(:restore) do
         update_column paranoia_column, nil
         update_column(paranoia_flag_column, false) if paranoia_flag_column
