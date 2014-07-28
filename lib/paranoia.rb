@@ -83,7 +83,7 @@ module Paranoia
     self.class.transaction do
       run_callbacks(:restore) do
         update_column paranoia_column, nil
-        update_column(paranoia_flag_column, false) if paranoia_flag_column
+        update_column(paranoia_flag_column, 0) if paranoia_flag_column
         restore_associated_records if opts[:recursive]
       end
     end
@@ -98,7 +98,7 @@ module Paranoia
   private
 
   def mark_columns_deleted
-    update_column(paranoia_flag_column, true) if paranoia_flag_column
+    update_column(paranoia_flag_column, id) if paranoia_flag_column
     touch(paranoia_column)
   end
 
