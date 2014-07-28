@@ -6,5 +6,5 @@ rvm:
   - jruby-19mode
 
 env:
-  - RAILS='~> 4.0.4'
-  - RAILS='~> 4.1.0'
+  - RAILS='~> 4.0.8'
+  - RAILS='~> 4.1.4'
