@@ -203,10 +203,10 @@ class ParanoiaTest < test_framework
   end
 
   def test_destroy_behaviour_for_unpersisted_models
-		model = ParanoidModel.new
-		model.destroy
+    model = ParanoidModel.new
+    model.destroy
 
-		# No assertion because we just want to ensure that ActiveRecord does not complain.
+    # No assertion because we just want to ensure that ActiveRecord does not complain.
   end
 
   # Regression test for #24
