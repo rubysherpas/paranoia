@@ -9,22 +9,33 @@ else
 end
 require File.expand_path(File.dirname(__FILE__) + "/../lib/paranoia")
 
-ActiveRecord::Base.establish_connection :adapter => 'sqlite3', database: ':memory:'
-ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_anthor_class_name_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_foreign_key_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, has_one_foreign_key_id INTEGER)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
-ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE fail_callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
+def connect!
+  ActiveRecord::Base.establish_connection :adapter => 'sqlite3', database: ':memory:'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_anthor_class_name_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_foreign_key_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, has_one_foreign_key_id INTEGER)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, is_deleted tinyint(1) not null default 0)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE fail_callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE asplode_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
+end
+
+class WithDifferentConnection < ActiveRecord::Base
+  establish_connection adapter: 'sqlite3', database: ':memory:'
+  connection.execute 'CREATE TABLE with_different_connections (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
+  acts_as_paranoid
+end
+
+connect!
 
 class ParanoiaTest < test_framework
   def setup
@@ -101,7 +112,7 @@ class ParanoiaTest < test_framework
     assert_equal nil, model.instance_variable_get(:@validate_called)
     assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
     assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
-    assert_equal nil, model.instance_variable_get(:@after_commit_callback_called)
+    assert model.instance_variable_get(:@after_commit_callback_called)
   end
 
   def test_destroy_behavior_for_paranoid_models
@@ -481,9 +492,8 @@ class ParanoiaTest < test_framework
     assert_equal false, hasOne.reload.deleted_at.nil?
 
     # Does it raise NoMethodException on restore of nil
-    assert_nothing_raised do
-      hasOne.restore(:recursive => true)
-    end
+    hasOne.restore(:recursive => true)
+    
     assert hasOne.reload.deleted_at.nil?
   end
 
@@ -503,6 +513,32 @@ class ParanoiaTest < test_framework
     # essentially, we're just ensuring that this doesn't crash
   end
 
+  def test_destroy_flagged_model
+    a = FlaggedModel.create
+    assert_equal false, a.is_deleted?
+
+    a.destroy
+    assert_equal true, a.is_deleted?
+  end
+
+  def test_restore_flagged_model
+    a = FlaggedModel.create
+    a.destroy
+    a.restore!
+    assert_equal false, a.is_deleted?
+    assert_equal false, a.deleted?
+  end
+
+  def test_uses_flagged_index
+    a = FlaggedModelWithCustomIndex.create(is_deleted: 0)
+    assert_equal 1, FlaggedModelWithCustomIndex.count
+    a.destroy
+    assert_equal 0, FlaggedModelWithCustomIndex.count
+    assert FlaggedModelWithCustomIndex.all.to_sql.index(FlaggedModelWithCustomIndex.paranoia_indexed_column.to_s)
+    assert !FlaggedModelWithCustomIndex.all.to_sql.index( FlaggedModelWithCustomIndex.paranoia_column.to_s)
+  end
+
+
   def test_i_am_the_destroyer
     output = capture(:stdout) { ParanoidModel.I_AM_THE_DESTROYER! }
     assert_equal %Q{
@@ -510,6 +546,36 @@ class ParanoiaTest < test_framework
       Ryan:   "What should this method do?"
       Sharon: "It should fix all the spelling errors on the page!"
 }, output
+  end
+
+  def test_destroy_fails_if_callback_raises_exception
+    parent = AsplodeModel.create
+
+    assert_raises(StandardError) { parent.destroy }
+
+    #transaction should be rolled back, so parent NOT deleted
+    refute parent.destroyed?, 'Parent record was destroyed, even though AR callback threw exception'
+  end
+
+  def test_destroy_fails_if_association_callback_raises_exception
+    parent = ParentModel.create
+    children = []
+    3.times { children << parent.asplode_models.create }
+
+    assert_raises(StandardError) { parent.destroy }
+
+    #transaction should be rolled back, so parent and children NOT deleted
+    refute parent.destroyed?, 'Parent record was destroyed, even though AR callback threw exception'
+    refute children.any?(&:destroyed?), 'Child record was destroyed, even though AR callback threw exception'
+  end
+
+  def test_restore_model_with_different_connection
+    ActiveRecord::Base.remove_connection # Disconnect the main connection
+    a = WithDifferentConnection.create
+    a.destroy!
+    a.restore!
+    # This test passes if no exception is raised
+    connect! # Reconnect the main connection
   end
 
   private
@@ -563,6 +629,7 @@ class ParentModel < ActiveRecord::Base
   has_many :related_models
   has_many :very_related_models, :class_name => 'RelatedModel', dependent: :destroy
   has_many :non_paranoid_models, dependent: :destroy
+  has_many :asplode_models, dependent: :destroy
 end
 
 class RelatedModel < ActiveRecord::Base
@@ -629,4 +696,19 @@ end
 class ParanoidModelWithForeignKeyBelong < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :paranoid_model_with_has_one
+end
+
+class FlaggedModel < PlainModel
+  acts_as_paranoid :flag_column => :is_deleted
+end
+
+class FlaggedModelWithCustomIndex < PlainModel
+  acts_as_paranoid :flag_column => :is_deleted, :indexed_column => :is_deleted
+end
+
+class AsplodeModel < ActiveRecord::Base
+  acts_as_paranoid
+  before_destroy do |r|
+    raise StandardError, 'ASPLODE!'
+  end
 end

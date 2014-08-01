@@ -4,8 +4,7 @@ rvm:
   - 2.0.0
   - 2.1.0
   - jruby-19mode
-  - rbx
 
 env:
-  - RAILS='~> 4.0.4'
-  - RAILS='~> 4.1.0'
+  - RAILS='~> 4.0.8'
+  - RAILS='~> 4.1.4'
