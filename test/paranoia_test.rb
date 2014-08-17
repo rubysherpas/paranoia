@@ -15,7 +15,7 @@ def connect!
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, is_deleted tinyint(1) not null default 0)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE fail_callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
@@ -467,32 +467,6 @@ class ParanoiaTest < test_framework
     # essentially, we're just ensuring that this doesn't crash
   end
 
-  def test_destroy_flagged_model
-    a = FlaggedModel.create
-    assert_equal false, a.is_deleted?
-
-    a.destroy
-    assert_equal true, a.is_deleted?
-  end
-
-  def test_restore_flagged_model
-    a = FlaggedModel.create
-    a.destroy
-    a.restore!
-    assert_equal false, a.is_deleted?
-    assert_equal false, a.deleted?
-  end
-
-  def test_uses_flagged_index
-    a = FlaggedModelWithCustomIndex.create(is_deleted: 0)
-    assert_equal 1, FlaggedModelWithCustomIndex.count
-    a.destroy
-    assert_equal 0, FlaggedModelWithCustomIndex.count
-    assert FlaggedModelWithCustomIndex.all.to_sql.index(FlaggedModelWithCustomIndex.paranoia_indexed_column.to_s)
-    assert !FlaggedModelWithCustomIndex.all.to_sql.index( FlaggedModelWithCustomIndex.paranoia_column.to_s)
-  end
-
-
   def test_i_am_the_destroyer
     output = capture(:stdout) { ParanoidModel.I_AM_THE_DESTROYER! }
     assert_equal %Q{
@@ -638,14 +612,6 @@ end
 class ParanoidModelWithBelong < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :paranoid_model_with_has_one
-end
-
-class FlaggedModel < PlainModel
-  acts_as_paranoid :flag_column => :is_deleted
-end
-
-class FlaggedModelWithCustomIndex < PlainModel
-  acts_as_paranoid :flag_column => :is_deleted, :indexed_column => :is_deleted
 end
 
 class AsplodeModel < ActiveRecord::Base
