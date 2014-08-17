@@ -435,6 +435,21 @@ class ParanoiaTest < test_framework
     
     assert hasOne.reload.deleted_at.nil?
   end
+  
+  # covers #131
+  def test_has_one_really_destroy_with_nil
+    model = ParanoidModelWithHasOne.create
+    model.really_destroy!
+    
+    refute ParanoidModelWithBelong.unscoped.exists?(model.id)
+  end
+  
+  def test_has_one_really_destroy_with_record
+    model = ParanoidModelWithHasOne.create { |record| record.build_paranoid_model_with_belong }
+    model.really_destroy!
+    
+    refute ParanoidModelWithBelong.unscoped.exists?(model.id)
+  end
 
   def test_observers_notified
     a = ParanoidModelWithObservers.create
