@@ -1,6 +1,17 @@
 require 'active_record' unless defined? ActiveRecord
 
 module Paranoia
+  @@default_sentinel_value = nil
+
+  # Change default_sentinel_value in a rails initilizer
+  def self.default_sentinel_value=(val)
+    @@default_sentinel_value = val
+  end
+
+  def self.default_sentinel_value
+    @@default_sentinel_value
+  end
+
   def self.included(klazz)
     klazz.extend Query
     klazz.extend Callbacks
@@ -11,14 +22,14 @@ module Paranoia
 
     def with_deleted
       if ActiveRecord::VERSION::STRING >= "4.1"
-        unscope where: paranoia_indexed_column
+        unscope where: paranoia_column
       else
         all.tap { |x| x.default_scoped = false }
       end
     end
 
     def only_deleted
-      with_deleted.where.not(paranoia_indexed_column => paranoia_false_value)
+      with_deleted.where.not(paranoia_column => paranoia_sentinel_value)
     end
     alias :deleted :only_deleted
 
@@ -28,12 +39,6 @@ module Paranoia
       else
         only_deleted.find(id).restore!(opts)
       end
-    end
-
-    private
-
-    def paranoia_false_value
-      (paranoia_indexed_column == paranoia_column) ? nil : 0
     end
   end
 
@@ -82,8 +87,7 @@ module Paranoia
   def restore!(opts = {})
     self.class.transaction do
       run_callbacks(:restore) do
-        update_column paranoia_column, nil
-        update_column(paranoia_flag_column, false) if paranoia_flag_column
+        update_column paranoia_column, paranoia_sentinel_value
         restore_associated_records if opts[:recursive]
       end
     end
@@ -91,18 +95,13 @@ module Paranoia
   alias :restore :restore!
 
   def destroyed?
-    !!send(paranoia_column)
+    send(paranoia_column) != paranoia_sentinel_value
   end
   alias :deleted? :destroyed?
 
   private
 
-  def mark_columns_deleted
-    update_column(paranoia_flag_column, true) if paranoia_flag_column
-    touch(paranoia_column)
-  end
-
-  # touch paranoia column, update flag column if necessary
+  # touch paranoia column.
   # insert time to paranoia column.
   # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
   def touch_paranoia_column(with_transaction=false)
@@ -111,11 +110,9 @@ module Paranoia
     # Let's not touch it if it's frozen.
     unless self.frozen?
       if with_transaction
-        with_transaction_returning_status do
-          mark_columns_deleted
-        end
+        with_transaction_returning_status { touch(paranoia_column) }
       else
-        mark_columns_deleted
+        touch(paranoia_column)
       end
     end
   end
@@ -169,14 +166,11 @@ class ActiveRecord::Base
     end
 
     include Paranoia
-    class_attribute :paranoia_column
-    class_attribute :paranoia_flag_column
-    class_attribute :paranoia_indexed_column
+    class_attribute :paranoia_column, :paranoia_sentinel_value
 
     self.paranoia_column = options[:column] || :deleted_at
-    self.paranoia_flag_column = options[:flag_column] || nil
-    self.paranoia_indexed_column = options[:indexed_column] || paranoia_column
-    default_scope { where(paranoia_indexed_column => paranoia_false_value) }
+    self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
+    default_scope { where(paranoia_column => paranoia_sentinel_value) }
 
     before_restore {
       self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
@@ -209,16 +203,12 @@ class ActiveRecord::Base
 
   private
 
-  def paranoia_flag_column
-    self.class.paranoia_flag_column
-  end
-
-  def paranoia_indexed_column
-    self.class.paranoia_indexed_column
-  end
-
   def paranoia_column
     self.class.paranoia_column
+  end
+
+  def paranoia_sentinel_value
+    self.class.paranoia_sentinel_value
   end
 end
 
