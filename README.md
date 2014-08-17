@@ -182,44 +182,6 @@ You can replace the older `acts_as_paranoid` methods as follows:
 The `recover` method in `acts_as_paranoid` runs `update` callbacks.  Paranoia's
 `restore` method does not do this.
 
-## Support for Unique Keys with Null Values
-
-With most databases, a unique key containing a null value will not be enforced because the null value is unique per row.
-
-``` ruby
-class AddDeletedAtToClients < ActiveRecord::Migration
-  def change
-    add_column :clients, :deleted_at, :datetime
-    add_index :clients, [:username, :deleted_at], unique: true
-  end
-end
-```
-
-Given the migration above, you could have multiple users with username bob given the following inserts: ('bob', null), ('bob', null), ('bob', null). We can agree this is not the expected behavior.
-
-To avoid this problem, we could use a flag column instead of a datetime, but the datetime value has intrinsic usefulness.  Instead, we can add a second column for the unique key that always has a value, in this case 0 or 1:
-
-``` ruby
-class AddDeletedAtToClients < ActiveRecord::Migration
-  def change
-    add_column :clients, :deleted_at, :datetime
-    add_column :clients, :is_deleted, :boolean, null: false, default: 0
-    add_index :clients, [:username, :is_deleted], unique: true
-  end
-end
-```
-
-Support this new column by updating your model as such:
-
-``` ruby
-class Client < ActiveRecord::Base
-  acts_as_paranoid :flag_column => :is_deleted
-  ...
-end
-```
-
-If you create an index on the flag column, and you want paranoia to use that index instead of deleted_at, you can add `:index_column => :is_deleted` to the acts_as_paranoid definition.
-
 ## License
 
 This gem is released under the MIT license.
