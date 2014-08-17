@@ -15,7 +15,7 @@ def connect!
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, is_deleted tinyint(1) not null default 0)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, name varchar(255) not null, deleted_at DATETIME, is_deleted integer not null default 0, constraint uk_plain_models_is_deleted unique (is_deleted, name))'
   ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE fail_callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
@@ -70,7 +70,7 @@ class ParanoiaTest < test_framework
   end
 
   def test_destroy_behavior_for_plain_models
-    model = PlainModel.new
+    model = PlainModel.new(name: "test")
     assert_equal 0, model.class.count
     model.save!
     assert_equal 1, model.class.count
@@ -432,7 +432,7 @@ class ParanoiaTest < test_framework
 
     # Does it raise NoMethodException on restore of nil
     hasOne.restore(:recursive => true)
-    
+
     assert hasOne.reload.deleted_at.nil?
   end
   
@@ -468,7 +468,7 @@ class ParanoiaTest < test_framework
   end
 
   def test_destroy_flagged_model
-    a = FlaggedModel.create
+    a = FlaggedModel.create(name: 'test')
     assert_equal false, a.is_deleted?
 
     a.destroy
@@ -476,7 +476,7 @@ class ParanoiaTest < test_framework
   end
 
   def test_restore_flagged_model
-    a = FlaggedModel.create
+    a = FlaggedModel.create(name: 'test')
     a.destroy
     a.restore!
     assert_equal false, a.is_deleted?
@@ -484,7 +484,7 @@ class ParanoiaTest < test_framework
   end
 
   def test_uses_flagged_index
-    a = FlaggedModelWithCustomIndex.create(is_deleted: 0)
+    a = FlaggedModelWithCustomIndex.create(name: 'test')
     assert_equal 1, FlaggedModelWithCustomIndex.count
     a.destroy
     assert_equal 0, FlaggedModelWithCustomIndex.count
@@ -492,6 +492,20 @@ class ParanoiaTest < test_framework
     assert !FlaggedModelWithCustomIndex.all.to_sql.index( FlaggedModelWithCustomIndex.paranoia_column.to_s)
   end
 
+  def test_uniqueness_conditions
+    a = FlaggedModel.create(name: 'testa')
+    b = FlaggedModel.create(name: 'testb')
+    assert_raises(ActiveRecord::RecordNotUnique) { FlaggedModel.create(name: 'testb') }
+
+    a.destroy
+    b.destroy
+
+    refute_equal a.id, b.is_deleted
+    assert_equal b.id, b.is_deleted
+    assert_instance_of FlaggedModel, FlaggedModel.create(name: 'testb')
+  end
+
+  def
 
   def test_i_am_the_destroyer
     output = capture(:stdout) { ParanoidModel.I_AM_THE_DESTROYER! }

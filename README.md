@@ -197,14 +197,14 @@ end
 
 Given the migration above, you could have multiple users with username bob given the following inserts: ('bob', null), ('bob', null), ('bob', null). We can agree this is not the expected behavior.
 
-To avoid this problem, we could use a flag column instead of a datetime, but the datetime value has intrinsic usefulness.  Instead, we can add a second column for the unique key that always has a value, in this case 0 or 1:
+To avoid this problem, we could use a flag column instead of a datetime, but the datetime value has intrinsic usefulness.  Instead, we can add a second column for the unique key that always has a value, in this case 0 for undeleted and the id for is_deleted:
 
 ``` ruby
 class AddDeletedAtToClients < ActiveRecord::Migration
   def change
     add_column :clients, :deleted_at, :datetime
-    add_column :clients, :is_deleted, :boolean, null: false, default: 0
-    add_index :clients, [:username, :is_deleted], unique: true
+    add_column :clients, :is_deleted, :integer, null: false, default: 0
+    add_index :clients, [:is_deleted, :username], unique: true
   end
 end
 ```
@@ -219,6 +219,8 @@ end
 ```
 
 If you create an index on the flag column, and you want paranoia to use that index instead of deleted_at, you can add `:index_column => :is_deleted` to the acts_as_paranoid definition.
+
+Please be aware that the flag column is meant to be used to guarantee the uniquess of another value, and should not be used by itself.
 
 ## License
 
