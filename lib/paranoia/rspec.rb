@@ -4,6 +4,10 @@ require 'rspec/expectations'
 RSpec::Matchers.define :act_as_paranoid do
   match { |subject| subject.class.ancestors.include?(Paranoia) }
 
-  failure_message_for_should { "#{subject.class} should use `acts_as_paranoid`" }
-  failure_message_for_should_not { "#{subject.class} should not use `acts_as_paranoid`" }
+  failure_message { "expected #{subject.class} to use `acts_as_paranoid`" }
+  failure_message_when_negated { "expected #{subject.class} not to use `acts_as_paranoid`" }
+
+  # RSpec 2 compatibility:
+  alias_method :failure_message_for_should, :failure_message
+  alias_method :failure_message_for_should_not, :failure_message_when_negated
 end
