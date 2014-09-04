@@ -290,6 +290,13 @@ class ParanoiaTest < test_framework
     assert_equal false, model.destroyed?
   end
 
+  def test_restore_on_object_return_self
+    model = ParanoidModel.create
+    model.destroy
+
+    assert_equal model.class, model.restore.class
+  end
+
   # Regression test for #92
   def test_destroy_twice
     model = ParanoidModel.new

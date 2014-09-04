@@ -34,11 +34,7 @@ module Paranoia
     alias :deleted :only_deleted
 
     def restore(id, opts = {})
-      if id.is_a?(Array)
-        id.map { |one_id| restore(one_id, opts) }
-      else
-        only_deleted.find(id).restore!(opts)
-      end
+      Array(id).flatten.map { |one_id| only_deleted.find(one_id).restore!(opts) }
     end
   end
 
@@ -97,6 +93,8 @@ module Paranoia
         restore_associated_records if opts[:recursive]
       end
     end
+
+    self
   end
   alias :restore :restore!
 
