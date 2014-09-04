@@ -537,6 +537,21 @@ class ParanoiaTest < test_framework
     connect! # Reconnect the main connection
   end
 
+  def test_restore_clear_association_cache_if_associations_present
+    parent = ParentModel.create
+    3.times { parent.very_related_models.create }
+
+    parent.destroy
+
+    assert_equal 0, parent.very_related_models.count
+    assert_equal 0, parent.very_related_models.size
+
+    parent.restore(recursive: true)
+
+    assert_equal 3, parent.very_related_models.count
+    assert_equal 3, parent.very_related_models.size
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")

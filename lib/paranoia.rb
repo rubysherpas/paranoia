@@ -143,6 +143,8 @@ module Paranoia
         end
       end
     end
+
+    clear_association_cache if destroyed_associations.present?
   end
 end
 
