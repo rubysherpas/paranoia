@@ -290,6 +290,13 @@ class ParanoiaTest < test_framework
     assert_equal false, model.destroyed?
   end
 
+  def test_restore_on_object_return_self
+    model = ParanoidModel.create
+    model.destroy
+
+    assert_equal model.class, model.restore.class
+  end
+
   # Regression test for #92
   def test_destroy_twice
     model = ParanoidModel.new
@@ -535,6 +542,21 @@ class ParanoiaTest < test_framework
     a.restore!
     # This test passes if no exception is raised
     connect! # Reconnect the main connection
+  end
+
+  def test_restore_clear_association_cache_if_associations_present
+    parent = ParentModel.create
+    3.times { parent.very_related_models.create }
+
+    parent.destroy
+
+    assert_equal 0, parent.very_related_models.count
+    assert_equal 0, parent.very_related_models.size
+
+    parent.restore(recursive: true)
+
+    assert_equal 3, parent.very_related_models.count
+    assert_equal 3, parent.very_related_models.size
   end
 
   private
