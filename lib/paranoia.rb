@@ -1,6 +1,17 @@
 require 'active_record' unless defined? ActiveRecord
 
 module Paranoia
+  @@default_sentinel_value = nil
+
+  # Change default_sentinel_value in a rails initilizer
+  def self.default_sentinel_value=(val)
+    @@default_sentinel_value = val
+  end
+
+  def self.default_sentinel_value
+    @@default_sentinel_value
+  end
+
   def self.included(klazz)
     klazz.extend Query
     klazz.extend Callbacks
@@ -11,29 +22,19 @@ module Paranoia
 
     def with_deleted
       if ActiveRecord::VERSION::STRING >= "4.1"
-        unscope where: paranoia_indexed_column
+        unscope where: paranoia_column
       else
         all.tap { |x| x.default_scoped = false }
       end
     end
 
     def only_deleted
-      with_deleted.where.not(paranoia_indexed_column => paranoia_false_value)
+      with_deleted.where.not(paranoia_column => paranoia_sentinel_value)
     end
     alias :deleted :only_deleted
 
     def restore(id, opts = {})
-      if id.is_a?(Array)
-        id.map { |one_id| restore(one_id, opts) }
-      else
-        only_deleted.find(id).restore!(opts)
-      end
-    end
-
-    private
-
-    def paranoia_false_value
-      (paranoia_indexed_column == paranoia_column) ? nil : 0
+      Array(id).flatten.map { |one_id| only_deleted.find(one_id).restore!(opts) }
     end
   end
 
@@ -82,27 +83,29 @@ module Paranoia
   def restore!(opts = {})
     self.class.transaction do
       run_callbacks(:restore) do
-        update_column paranoia_column, nil
-        update_column(paranoia_flag_column, false) if paranoia_flag_column
+        # Fixes a bug where the build would error because attributes were frozen.
+        # This only happened on Rails versions earlier than 4.1.
+        noop_if_frozen = ActiveRecord.version < Gem::Version.new("4.1")
+        if (noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen
+          write_attribute paranoia_column, paranoia_sentinel_value
+          update_column paranoia_column, paranoia_sentinel_value
+        end
         restore_associated_records if opts[:recursive]
       end
     end
+
+    self
   end
   alias :restore :restore!
 
   def destroyed?
-    !!send(paranoia_column)
+    send(paranoia_column) != paranoia_sentinel_value
   end
   alias :deleted? :destroyed?
 
   private
 
-  def mark_columns_deleted
-    update_column(paranoia_flag_column, true) if paranoia_flag_column
-    touch(paranoia_column)
-  end
-
-  # touch paranoia column, update flag column if necessary
+  # touch paranoia column.
   # insert time to paranoia column.
   # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
   def touch_paranoia_column(with_transaction=false)
@@ -111,11 +114,9 @@ module Paranoia
     # Let's not touch it if it's frozen.
     unless self.frozen?
       if with_transaction
-        with_transaction_returning_status do
-          mark_columns_deleted
-        end
+        with_transaction_returning_status { touch(paranoia_column) }
       else
-        mark_columns_deleted
+        touch(paranoia_column)
       end
     end
   end
@@ -146,6 +147,8 @@ module Paranoia
         Object.const_get(association_class_name).only_deleted.where(association_foreign_key, self.id).first.try(:restore, recursive: true)
       end
     end
+
+    clear_association_cache if destroyed_associations.present?
   end
 end
 
@@ -160,10 +163,14 @@ class ActiveRecord::Base
       if dependent_reflections.any?
         dependent_reflections.each do |name, _|
           associated_records = self.send(name)
-          # Paranoid models will have this method, non-paranoid models will not
-          associated_records = associated_records.with_deleted if associated_records.respond_to?(:with_deleted)
-          associated_records.each(&:really_destroy!)
-          self.send(name).reload
+          # has_one association can return nil
+          if associated_records && associated_records.respond_to?(:with_deleted)
+            # Paranoid models will have this method, non-paranoid models will not
+            associated_records.with_deleted.each(&:really_destroy!)
+            self.send(name).reload
+          elsif associated_records && !associated_records.respond_to?(:each) # single record
+            associated_records.really_destroy!
+          end
         end
       end
       touch_paranoia_column if ActiveRecord::VERSION::STRING >= "4.1"
@@ -171,14 +178,11 @@ class ActiveRecord::Base
     end
 
     include Paranoia
-    class_attribute :paranoia_column
-    class_attribute :paranoia_flag_column
-    class_attribute :paranoia_indexed_column
+    class_attribute :paranoia_column, :paranoia_sentinel_value
 
     self.paranoia_column = options[:column] || :deleted_at
-    self.paranoia_flag_column = options[:flag_column] || nil
-    self.paranoia_indexed_column = options[:indexed_column] || paranoia_column
-    default_scope { where(paranoia_indexed_column => paranoia_false_value) }
+    self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
+    default_scope { where(paranoia_column => paranoia_sentinel_value) }
 
     before_restore {
       self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
@@ -211,16 +215,12 @@ class ActiveRecord::Base
 
   private
 
-  def paranoia_flag_column
-    self.class.paranoia_flag_column
-  end
-
-  def paranoia_indexed_column
-    self.class.paranoia_indexed_column
-  end
-
   def paranoia_column
     self.class.paranoia_column
+  end
+
+  def paranoia_sentinel_value
+    self.class.paranoia_sentinel_value
   end
 end
 

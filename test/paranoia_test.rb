@@ -17,7 +17,7 @@ def connect!
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_anthor_class_name_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_foreign_key_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, has_one_foreign_key_id INTEGER)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, is_deleted tinyint(1) not null default 0)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE fail_callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
@@ -26,6 +26,7 @@ def connect!
   ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE custom_sentinel_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME NOT NULL)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
 end
 
@@ -160,6 +161,36 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.deleted.count
   end
 
+  def test_default_sentinel_value
+    assert_equal nil, ParanoidModel.paranoia_sentinel_value
+  end
+
+  def test_sentinel_value_for_custom_sentinel_models
+    model = CustomSentinelModel.new
+    assert_equal 0, model.class.count
+    model.save!
+    assert_equal DateTime.new(0), model.deleted_at
+    assert_equal 1, model.class.count
+    model.destroy
+
+    assert DateTime.new(0) != model.deleted_at
+    assert model.destroyed?
+
+    assert_equal 0, model.class.count
+    assert_equal 1, model.class.unscoped.count
+    assert_equal 1, model.class.only_deleted.count
+    assert_equal 1, model.class.deleted.count
+
+    model.restore
+    assert_equal DateTime.new(0), model.deleted_at
+    assert !model.destroyed?
+
+    assert_equal 1, model.class.count
+    assert_equal 1, model.class.unscoped.count
+    assert_equal 0, model.class.only_deleted.count
+    assert_equal 0, model.class.deleted.count
+  end
+
   def test_destroy_behavior_for_featureful_paranoid_models
     model = get_featureful_model
     assert_equal 0, model.class.count
@@ -259,6 +290,13 @@ class ParanoiaTest < test_framework
     model.reload
 
     assert_equal false, model.destroyed?
+  end
+
+  def test_restore_on_object_return_self
+    model = ParanoidModel.create
+    model.destroy
+
+    assert_equal model.class, model.restore.class
   end
 
   # Regression test for #92
@@ -496,6 +534,21 @@ class ParanoiaTest < test_framework
     
     assert hasOne.reload.deleted_at.nil?
   end
+  
+  # covers #131
+  def test_has_one_really_destroy_with_nil
+    model = ParanoidModelWithHasOne.create
+    model.really_destroy!
+    
+    refute ParanoidModelWithBelong.unscoped.exists?(model.id)
+  end
+  
+  def test_has_one_really_destroy_with_record
+    model = ParanoidModelWithHasOne.create { |record| record.build_paranoid_model_with_belong }
+    model.really_destroy!
+    
+    refute ParanoidModelWithBelong.unscoped.exists?(model.id)
+  end
 
   def test_observers_notified
     a = ParanoidModelWithObservers.create
@@ -512,32 +565,6 @@ class ParanoiaTest < test_framework
     a.restore!
     # essentially, we're just ensuring that this doesn't crash
   end
-
-  def test_destroy_flagged_model
-    a = FlaggedModel.create
-    assert_equal false, a.is_deleted?
-
-    a.destroy
-    assert_equal true, a.is_deleted?
-  end
-
-  def test_restore_flagged_model
-    a = FlaggedModel.create
-    a.destroy
-    a.restore!
-    assert_equal false, a.is_deleted?
-    assert_equal false, a.deleted?
-  end
-
-  def test_uses_flagged_index
-    a = FlaggedModelWithCustomIndex.create(is_deleted: 0)
-    assert_equal 1, FlaggedModelWithCustomIndex.count
-    a.destroy
-    assert_equal 0, FlaggedModelWithCustomIndex.count
-    assert FlaggedModelWithCustomIndex.all.to_sql.index(FlaggedModelWithCustomIndex.paranoia_indexed_column.to_s)
-    assert !FlaggedModelWithCustomIndex.all.to_sql.index( FlaggedModelWithCustomIndex.paranoia_column.to_s)
-  end
-
 
   def test_i_am_the_destroyer
     output = capture(:stdout) { ParanoidModel.I_AM_THE_DESTROYER! }
@@ -576,6 +603,21 @@ class ParanoiaTest < test_framework
     a.restore!
     # This test passes if no exception is raised
     connect! # Reconnect the main connection
+  end
+
+  def test_restore_clear_association_cache_if_associations_present
+    parent = ParentModel.create
+    3.times { parent.very_related_models.create }
+
+    parent.destroy
+
+    assert_equal 0, parent.very_related_models.count
+    assert_equal 0, parent.very_related_models.size
+
+    parent.restore(recursive: true)
+
+    assert_equal 3, parent.very_related_models.count
+    assert_equal 3, parent.very_related_models.size
   end
 
   private
@@ -657,6 +699,10 @@ end
 
 class CustomColumnModel < ActiveRecord::Base
   acts_as_paranoid column: :destroyed_at
+end
+
+class CustomSentinelModel < ActiveRecord::Base
+  acts_as_paranoid sentinel_value: DateTime.new(0)
 end
 
 class NonParanoidModel < ActiveRecord::Base

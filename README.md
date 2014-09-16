@@ -184,41 +184,24 @@ The `recover` method in `acts_as_paranoid` runs `update` callbacks.  Paranoia's
 
 ## Support for Unique Keys with Null Values
 
-With most databases, a unique key containing a null value will not be enforced because the null value is unique per row.
+Most databases ignore null columns when it comes to resolving unique index
+constraints.  This means unique constraints that involve nullable columns may be
+problematic. Instead of using `NULL` to represent a not-deleted row, you can pick
+a value that you want paranoia to mean not deleted. Note that you can/should
+now apply a `NOT NULL` constraint to your `deleted_at` column.
 
-``` ruby
-class AddDeletedAtToClients < ActiveRecord::Migration
-  def change
-    add_column :clients, :deleted_at, :datetime
-    add_index :clients, [:username, :deleted_at], unique: true
-  end
-end
+Per model:
+
+```ruby
+# pick some value
+acts_as_paranoid sentinel_value: DateTime.new(0)
 ```
 
-Given the migration above, you could have multiple users with username bob given the following inserts: ('bob', null), ('bob', null), ('bob', null). We can agree this is not the expected behavior.
+or globally in a rails initializer, e.g. `config/initializer/paranoia.rb`
 
-To avoid this problem, we could use a flag column instead of a datetime, but the datetime value has intrinsic usefulness.  Instead, we can add a second column for the unique key that always has a value, in this case 0 or 1:
-
-``` ruby
-class AddDeletedAtToClients < ActiveRecord::Migration
-  def change
-    add_column :clients, :deleted_at, :datetime
-    add_column :clients, :is_deleted, :boolean, null: false, default: 0
-    add_index :clients, [:username, :is_deleted], unique: true
-  end
-end
+```ruby
+Paranoia.default_sentinel_value = DateTime.new(0)
 ```
-
-Support this new column by updating your model as such:
-
-``` ruby
-class Client < ActiveRecord::Base
-  acts_as_paranoid :flag_column => :is_deleted
-  ...
-end
-```
-
-If you create an index on the flag column, and you want paranoia to use that index instead of deleted_at, you can add `:index_column => :is_deleted` to the acts_as_paranoid definition.
 
 ## License
 
