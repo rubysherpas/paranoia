@@ -29,7 +29,7 @@ module Paranoia
     end
 
     def only_deleted
-      with_deleted.where.not(paranoia_column => paranoia_sentinel_value)
+      with_deleted.where.not(table_name => { paranoia_column => paranoia_sentinel_value} )
     end
     alias :deleted :only_deleted
 
@@ -180,9 +180,9 @@ class ActiveRecord::Base
     include Paranoia
     class_attribute :paranoia_column, :paranoia_sentinel_value
 
-    self.paranoia_column = options[:column] || :deleted_at
+    self.paranoia_column = (options[:column] || :deleted_at).to_s
     self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
-    default_scope { where(paranoia_column => paranoia_sentinel_value) }
+    default_scope { where(table_name => { paranoia_column => paranoia_sentinel_value }) }
 
     before_restore {
       self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
