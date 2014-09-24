@@ -267,6 +267,14 @@ class ParanoiaTest < test_framework
     assert_equal 0, employer.employees.count
     assert_equal 0, employee.jobs.count
     assert_equal 0, employee.employers.count
+
+    employee3 = Employee.create
+    employer1 = Employer.create
+    job2 = NoJob.create :employer => employer, :employee => employee3
+    employee3.destroy
+    employer1.destroy
+    assert_equal employee3, job2.employee
+    assert_equal employer, job2.employer
   end
 
   def test_delete_behavior_for_callbacks
@@ -721,6 +729,12 @@ class Job < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :employer
   belongs_to :employee
+end
+
+class NoJob <  ActiveRecord::Base
+  self.table_name = 'jobs'
+  belongs_to :employer, with_deleted: true
+  belongs_to :employee, with_deleted: true
 end
 
 class CustomColumnModel < ActiveRecord::Base
