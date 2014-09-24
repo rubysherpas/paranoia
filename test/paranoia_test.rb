@@ -95,6 +95,8 @@ class ParanoiaTest < test_framework
     assert_equal nil, model.instance_variable_get(:@update_callback_called)
     assert_equal nil, model.instance_variable_get(:@save_callback_called)
     assert_equal nil, model.instance_variable_get(:@validate_called)
+    assert_equal nil, model.instance_variable_get(:@after_really_destroy_called)
+    assert_equal nil, model.instance_variable_get(:@really_destroy_called)
 
     assert model.instance_variable_get(:@destroy_callback_called)
     assert model.instance_variable_get(:@after_destroy_callback_called)
@@ -113,6 +115,10 @@ class ParanoiaTest < test_framework
     assert_equal nil, model.instance_variable_get(:@validate_called)
     assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
     assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
+    assert_equal nil, model.instance_variable_get(:@_destroy_callback_called)
+    assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
+    assert_equal nil, model.instance_variable_get(:@after_really_destroy_called)
+    assert_equal nil, model.instance_variable_get(:@really_destroy_called)
     assert model.instance_variable_get(:@after_commit_callback_called)
   end
 
@@ -345,6 +351,22 @@ class ParanoiaTest < test_framework
     refute ParanoidModel.unscoped.exists?(model.id)
   end
 
+  def test_really_destroy_with_callback
+    model = CallbackModel.new
+    model.save
+    model.remove_called_variables
+
+    model.really_destroy!
+
+    assert model.instance_variable_get(:@destroy_callback_called)
+    assert model.instance_variable_get(:@after_destroy_callback_called)
+
+    assert model.instance_variable_get(:@after_really_destroy_called)
+    assert model.instance_variable_get(:@after_really_destroy_called)
+
+    refute CallbackModel.unscoped.exists?(model.id)
+  end
+
   def test_real_destroy_dependent_destroy
     parent = ParentModel.create
     child = parent.very_related_models.create
@@ -531,22 +553,22 @@ class ParanoiaTest < test_framework
 
     # Does it raise NoMethodException on restore of nil
     hasOne.restore(:recursive => true)
-    
+
     assert hasOne.reload.deleted_at.nil?
   end
-  
+
   # covers #131
   def test_has_one_really_destroy_with_nil
     model = ParanoidModelWithHasOne.create
     model.really_destroy!
-    
+
     refute ParanoidModelWithBelong.unscoped.exists?(model.id)
   end
-  
+
   def test_has_one_really_destroy_with_record
     model = ParanoidModelWithHasOne.create { |record| record.build_paranoid_model_with_belong }
     model.really_destroy!
-    
+
     refute ParanoidModelWithBelong.unscoped.exists?(model.id)
   end
 
@@ -659,6 +681,10 @@ class CallbackModel < ActiveRecord::Base
   after_commit   {|model| model.instance_variable_set :@after_commit_callback_called, true }
 
   validate       {|model| model.instance_variable_set :@validate_called, true }
+
+  before_really_destroy { |model| model.instance_variable_set :@really_destroy_called, true }
+  after_really_destroy { |model| model.instance_variable_set :@after_really_destroy_called, true }
+
 
   def remove_called_variables
     instance_variables.each {|name| (name.to_s.end_with?('_called')) ? remove_instance_variable(name) : nil}

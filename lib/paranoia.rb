@@ -53,6 +53,20 @@ module Paranoia
       klazz.define_singleton_method("after_restore") do |*args, &block|
         set_callback(:restore, :after, *args, &block)
       end
+
+      klazz.define_callbacks :really_destroy
+
+      klazz.define_singleton_method("before_really_destroy") do |*args, &block|
+        set_callback(:really_destroy, :before, *args, &block)
+      end
+
+      klazz.define_singleton_method("around_really_destroy") do |*args, &block|
+        set_callback(:really_destroy, :around, *args, &block)
+      end
+
+      klazz.define_singleton_method("after_really_destroy") do |*args, &block|
+        set_callback(:really_destroy, :after, *args, &block)
+      end
     end
   end
 
@@ -156,25 +170,29 @@ class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
     alias :destroy! :destroy
     alias :delete! :delete
+
     def really_destroy!
-      dependent_reflections = self.class.reflections.select do |name, reflection|
-        reflection.options[:dependent] == :destroy
-      end
-      if dependent_reflections.any?
-        dependent_reflections.each do |name, _|
-          associated_records = self.send(name)
-          # has_one association can return nil
-          if associated_records && associated_records.respond_to?(:with_deleted)
-            # Paranoid models will have this method, non-paranoid models will not
-            associated_records.with_deleted.each(&:really_destroy!)
-            self.send(name).reload
-          elsif associated_records && !associated_records.respond_to?(:each) # single record
-            associated_records.really_destroy!
+      run_callbacks(:really_destroy) do
+        dependent_reflections = self.class.reflections.select do |name, reflection|
+          reflection.options[:dependent] == :destroy
+        end
+        if dependent_reflections.any?
+          dependent_reflections.each do |name, _|
+            associated_records = self.send(name)
+            # has_one association can return nil
+            if associated_records && associated_records.respond_to?(:with_deleted)
+              # Paranoid models will have this method, non-paranoid models will not
+              associated_records.with_deleted.each(&:really_destroy!)
+              self.send(name).reload
+            elsif associated_records && !associated_records.respond_to?(:each) # single record
+              associated_records.really_destroy!
+            end
           end
         end
+
+        touch_paranoia_column if ActiveRecord::VERSION::STRING >= "4.1"
+        destroy!
       end
-      touch_paranoia_column if ActiveRecord::VERSION::STRING >= "4.1"
-      destroy!
     end
 
     include Paranoia
