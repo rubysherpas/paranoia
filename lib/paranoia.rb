@@ -32,7 +32,6 @@ module Paranoia
         result = belongs_to_without_deleted(target, scope, options)
 
         if with_deleted
-          result[:with_deleted] = with_deleted
           unless method_defined? "#{target}_with_unscoped"
             class_eval <<-RUBY, __FILE__, __LINE__
               def #{target}_with_unscoped(*args)
