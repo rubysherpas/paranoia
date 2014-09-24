@@ -361,7 +361,7 @@ class ParanoiaTest < test_framework
     assert model.instance_variable_get(:@destroy_callback_called)
     assert model.instance_variable_get(:@after_destroy_callback_called)
 
-    assert model.instance_variable_get(:@after_really_destroy_called)
+    assert model.instance_variable_get(:@really_destroy_called)
     assert model.instance_variable_get(:@after_really_destroy_called)
 
     refute CallbackModel.unscoped.exists?(model.id)
