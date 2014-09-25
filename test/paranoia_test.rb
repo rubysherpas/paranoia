@@ -267,14 +267,40 @@ class ParanoiaTest < test_framework
     assert_equal 0, employer.employees.count
     assert_equal 0, employee.jobs.count
     assert_equal 0, employee.employers.count
+  end
 
-    employee3 = Employee.create
-    employer1 = Employer.create
-    job2 = NoJob.create :employer => employer, :employee => employee3
-    employee3.destroy
-    employer1.destroy
-    assert_equal employee3, job2.employee
-    assert_equal employer, job2.employer
+  if ActiveRecord::VERSION::STRING >= "4.1"
+    class Job <  ActiveRecord::Base
+      belongs_to :employer, with_deleted: true
+      belongs_to :employee, with_deleted: true
+    end
+
+    class JobWithParanoid < ActiveRecord::Base
+      self.table_name = 'jobs'
+      acts_as_paranoid
+      belongs_to :employer, with_deleted: true
+      belongs_to :employee, with_deleted: false
+    end
+
+    def test_default_scope_for_belongs_to_with_deleted
+      employee = Employee.create
+      employer = Employer.create
+      job = Job.create :employer => employer, :employee => employee
+      employee.destroy
+      employer.destroy
+      job.reload
+      assert_equal employee, job.employee
+      assert_equal employer, job.employer
+
+      employee = Employee.create
+      employer = Employer.create
+      job1 = JobWithParanoid.create :employer => employer, :employee => employee
+      employee.destroy
+      employer.destroy
+      job1.reload
+      assert_equal nil, job1.employee
+      assert_equal employer, job1.employer
+    end
   end
 
   def test_delete_behavior_for_callbacks
@@ -729,12 +755,6 @@ class Job < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :employer
   belongs_to :employee
-end
-
-class NoJob <  ActiveRecord::Base
-  self.table_name = 'jobs'
-  belongs_to :employer, with_deleted: true
-  belongs_to :employee, with_deleted: true
 end
 
 class CustomColumnModel < ActiveRecord::Base
