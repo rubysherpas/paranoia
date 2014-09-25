@@ -278,6 +278,6 @@ class ActiveRecord::Base
   end
 end
 
-ActiveRecord::Base.send :include, Paranoia::Association
+ActiveRecord::Base.send :include, Paranoia::Association if ActiveRecord::VERSION::STRING >= "4.1"
 
 require 'paranoia/rspec' if defined? RSpec
