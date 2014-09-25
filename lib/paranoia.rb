@@ -17,6 +17,39 @@ module Paranoia
     klazz.extend Callbacks
   end
 
+  module Association
+    def self.included(base)
+      base.extend ClassMethods
+      class << base
+        alias_method_chain :belongs_to, :deleted
+      end
+    end
+
+    module ClassMethods
+
+      def belongs_to_with_deleted(target, scope = nil, options = {})
+        with_deleted = (scope.is_a?(Hash) ? scope : options).delete(:with_deleted)
+        result = belongs_to_without_deleted(target, scope, options)
+
+        if with_deleted
+          unless method_defined? "#{target}_with_unscoped"
+            class_eval <<-RUBY, __FILE__, __LINE__
+              def #{target}_with_unscoped(*args)
+                association = association(:#{target})
+                return nil if association.options[:polymorphic] && association.klass.nil?
+                return #{target}_without_unscoped(*args) unless association.klass.paranoid?
+                association.klass.with_deleted.scoping { #{target}_without_unscoped(*args) }
+              end
+              alias_method_chain :#{target}, :unscoped
+            RUBY
+          end
+        end
+
+        result
+      end
+    end
+  end
+
   module Query
     def paranoid? ; true ; end
 
@@ -52,6 +85,20 @@ module Paranoia
 
       klazz.define_singleton_method("after_restore") do |*args, &block|
         set_callback(:restore, :after, *args, &block)
+      end
+
+      klazz.define_callbacks :really_destroy
+
+      klazz.define_singleton_method("before_really_destroy") do |*args, &block|
+        set_callback(:really_destroy, :before, *args, &block)
+      end
+
+      klazz.define_singleton_method("around_really_destroy") do |*args, &block|
+        set_callback(:really_destroy, :around, *args, &block)
+      end
+
+      klazz.define_singleton_method("after_really_destroy") do |*args, &block|
+        set_callback(:really_destroy, :after, *args, &block)
       end
     end
   end
@@ -152,29 +199,36 @@ module Paranoia
   end
 end
 
+
+
 class ActiveRecord::Base
+
   def self.acts_as_paranoid(options={})
     alias :destroy! :destroy
     alias :delete! :delete
+
     def really_destroy!
-      dependent_reflections = self.class.reflections.select do |name, reflection|
-        reflection.options[:dependent] == :destroy
-      end
-      if dependent_reflections.any?
-        dependent_reflections.each do |name, _|
-          associated_records = self.send(name)
-          # has_one association can return nil
-          if associated_records && associated_records.respond_to?(:with_deleted)
-            # Paranoid models will have this method, non-paranoid models will not
-            associated_records.with_deleted.each(&:really_destroy!)
-            self.send(name).reload
-          elsif associated_records && !associated_records.respond_to?(:each) # single record
-            associated_records.really_destroy!
+      run_callbacks(:really_destroy) do
+        dependent_reflections = self.class.reflections.select do |name, reflection|
+          reflection.options[:dependent] == :destroy
+        end
+        if dependent_reflections.any?
+          dependent_reflections.each do |name, _|
+            associated_records = self.send(name)
+            # has_one association can return nil
+            if associated_records && associated_records.respond_to?(:with_deleted)
+              # Paranoid models will have this method, non-paranoid models will not
+              associated_records.with_deleted.each(&:really_destroy!)
+              self.send(name).reload
+            elsif associated_records && !associated_records.respond_to?(:each) # single record
+              associated_records.really_destroy!
+            end
           end
         end
+
+        touch_paranoia_column if ActiveRecord::VERSION::STRING >= "4.1"
+        destroy!
       end
-      touch_paranoia_column if ActiveRecord::VERSION::STRING >= "4.1"
-      destroy!
     end
 
     include Paranoia
@@ -223,5 +277,7 @@ class ActiveRecord::Base
     self.class.paranoia_sentinel_value
   end
 end
+
+ActiveRecord::Base.send :include, Paranoia::Association if ActiveRecord::VERSION::STRING >= "4.1"
 
 require 'paranoia/rspec' if defined? RSpec
