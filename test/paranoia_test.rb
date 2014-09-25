@@ -16,6 +16,7 @@ def connect!
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_anthor_class_name_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_foreign_key_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, has_one_foreign_key_id INTEGER)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE not_paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
   ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
@@ -531,22 +532,22 @@ class ParanoiaTest < test_framework
 
     # Does it raise NoMethodException on restore of nil
     hasOne.restore(:recursive => true)
-    
+
     assert hasOne.reload.deleted_at.nil?
   end
-  
+
   # covers #131
   def test_has_one_really_destroy_with_nil
     model = ParanoidModelWithHasOne.create
     model.really_destroy!
-    
+
     refute ParanoidModelWithBelong.unscoped.exists?(model.id)
   end
-  
+
   def test_has_one_really_destroy_with_record
     model = ParanoidModelWithHasOne.create { |record| record.build_paranoid_model_with_belong }
     model.really_destroy!
-    
+
     refute ParanoidModelWithBelong.unscoped.exists?(model.id)
   end
 
@@ -727,6 +728,7 @@ class ParanoidModelWithHasOne < ParanoidModel
   has_one :paranoid_model_with_belong, :dependent => :destroy
   has_one :class_name_belong, :dependent => :destroy, :class_name => "ParanoidModelWithAnthorClassNameBelong"
   has_one :paranoid_model_with_foreign_key_belong, :dependent => :destroy, :foreign_key => "has_one_foreign_key_id"
+  has_one :not_paranoid_model_with_belong, :dependent => :destroy
 end
 
 class ParanoidModelWithBelong < ActiveRecord::Base
@@ -744,6 +746,10 @@ class ParanoidModelWithForeignKeyBelong < ActiveRecord::Base
   belongs_to :paranoid_model_with_has_one
 end
 
+class NotParanoidModelWithBelong < ActiveRecord::Base
+  belongs_to :paranoid_model_with_has_one
+end
+
 class FlaggedModel < PlainModel
   acts_as_paranoid :flag_column => :is_deleted
 end
@@ -751,6 +757,8 @@ end
 class FlaggedModelWithCustomIndex < PlainModel
   acts_as_paranoid :flag_column => :is_deleted, :indexed_column => :is_deleted
 end
+
+
 
 class AsplodeModel < ActiveRecord::Base
   acts_as_paranoid
