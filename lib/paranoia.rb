@@ -34,16 +34,12 @@ module Paranoia
     end
 
     def only_deleted
-      with_deleted.where.not(paranoia_column => paranoia_sentinel_value)
+      with_deleted.where.not(table_name => { paranoia_column => paranoia_sentinel_value} )
     end
     alias :deleted :only_deleted
 
     def restore(id, opts = {})
-      if id.is_a?(Array)
-        id.map { |one_id| restore(one_id, opts) }
-      else
-        only_deleted.find(id).restore!(opts)
-      end
+      Array(id).flatten.map { |one_id| only_deleted.find(one_id).restore!(opts) }
     end
   end
 
@@ -106,6 +102,8 @@ module Paranoia
         end
       end
     end
+
+    self
   end
   alias :restore :restore!
 
@@ -154,7 +152,15 @@ module Paranoia
           end
         end
       end
+
+      if association_data.nil? && association.macro.to_s == "has_one"
+        association_class_name = association.options[:class_name].present? ? association.options[:class_name] : association.name.to_s.camelize
+        association_foreign_key = association.options[:foreign_key].present? ? association.options[:foreign_key] : "#{self.class.name.to_s.underscore}_id"
+        Object.const_get(association_class_name).only_deleted.where(association_foreign_key, self.id).first.try(:restore, recursive: true)
+      end
     end
+
+    clear_association_cache if destroyed_associations.present?
   end
 end
 
@@ -186,11 +192,11 @@ class ActiveRecord::Base
     include Paranoia
     class_attribute :paranoia_column, :paranoia_sentinel_value, :paranoia_dependent_recovery_window
 
-    self.paranoia_column = options[:column] || :deleted_at
+    self.paranoia_column = (options[:column] || :deleted_at).to_s
     self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
     self.paranoia_dependent_recovery_window = options[:dependent_recovery_window] || Paranoia.default_dependent_recovery_window
 
-    default_scope { where(paranoia_column => paranoia_sentinel_value) }
+    default_scope { where(table_name => { paranoia_column => paranoia_sentinel_value}) }
 
     before_restore {
       self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)

@@ -14,6 +14,8 @@ def connect!
   ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_anthor_class_name_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_foreign_key_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, has_one_foreign_key_id INTEGER)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
   ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
@@ -303,6 +305,13 @@ class ParanoiaTest < test_framework
     assert_equal false, model.destroyed?
   end
 
+  def test_restore_on_object_return_self
+    model = ParanoidModel.create
+    model.destroy
+
+    assert_equal model.class, model.restore.class
+  end
+
   # Regression test for #92
   def test_destroy_twice
     model = ParanoidModel.new
@@ -465,7 +474,11 @@ class ParanoiaTest < test_framework
     # setup and destroy test objects
     hasOne = ParanoidModelWithHasOne.create
     belongsTo = ParanoidModelWithBelong.create
+    anthorClassName = ParanoidModelWithAnthorClassNameBelong.create
+    foreignKey = ParanoidModelWithForeignKeyBelong.create
     hasOne.paranoid_model_with_belong = belongsTo
+    hasOne.class_name_belong = anthorClassName
+    hasOne.paranoid_model_with_foreign_key_belong = foreignKey
     hasOne.save!
 
     hasOne.destroy
@@ -479,6 +492,61 @@ class ParanoiaTest < test_framework
     assert_equal true, hasOne.reload.deleted_at.nil?
     assert_equal true, belongsTo.reload.deleted_at.nil?, "#{belongsTo.deleted_at}"
     assert ParanoidModelWithBelong.with_deleted.reload.count != 0, "There should be a record"
+    assert ParanoidModelWithAnthorClassNameBelong.with_deleted.reload.count != 0, "There should be an other record"
+    assert ParanoidModelWithForeignKeyBelong.with_deleted.reload.count != 0, "There should be a foreign_key record"
+  end
+
+  def test_new_restore_with_has_one_association
+    # setup and destroy test objects
+    hasOne = ParanoidModelWithHasOne.create
+    belongsTo = ParanoidModelWithBelong.create
+    anthorClassName = ParanoidModelWithAnthorClassNameBelong.create
+    foreignKey = ParanoidModelWithForeignKeyBelong.create
+    hasOne.paranoid_model_with_belong = belongsTo
+    hasOne.class_name_belong = anthorClassName
+    hasOne.paranoid_model_with_foreign_key_belong = foreignKey
+    hasOne.save!
+
+    hasOne.destroy
+    assert_equal false, hasOne.deleted_at.nil?
+    assert_equal false, belongsTo.deleted_at.nil?
+
+    # Does it restore has_one associations?
+    newHasOne = ParanoidModelWithHasOne.with_deleted.find(hasOne.id)
+    newHasOne.restore(:recursive => true)
+    newHasOne.save!
+
+    assert_equal true, hasOne.reload.deleted_at.nil?
+    assert_equal true, belongsTo.reload.deleted_at.nil?, "#{belongsTo.deleted_at}"
+    assert ParanoidModelWithBelong.with_deleted.reload.count != 0, "There should be a record"
+    assert ParanoidModelWithAnthorClassNameBelong.with_deleted.reload.count != 0, "There should be an other record"
+    assert ParanoidModelWithForeignKeyBelong.with_deleted.reload.count != 0, "There should be a foreign_key record"
+  end
+
+  def test_model_restore_with_has_one_association
+    # setup and destroy test objects
+    hasOne = ParanoidModelWithHasOne.create
+    belongsTo = ParanoidModelWithBelong.create
+    anthorClassName = ParanoidModelWithAnthorClassNameBelong.create
+    foreignKey = ParanoidModelWithForeignKeyBelong.create
+    hasOne.paranoid_model_with_belong = belongsTo
+    hasOne.class_name_belong = anthorClassName
+    hasOne.paranoid_model_with_foreign_key_belong = foreignKey
+    hasOne.save!
+
+    hasOne.destroy
+    assert_equal false, hasOne.deleted_at.nil?
+    assert_equal false, belongsTo.deleted_at.nil?
+
+    # Does it restore has_one associations?
+    ParanoidModelWithHasOne.restore(hasOne.id, :recursive => true)
+    hasOne.save!
+
+    assert_equal true, hasOne.reload.deleted_at.nil?
+    assert_equal true, belongsTo.reload.deleted_at.nil?, "#{belongsTo.deleted_at}"
+    assert ParanoidModelWithBelong.with_deleted.reload.count != 0, "There should be a record"
+    assert ParanoidModelWithAnthorClassNameBelong.with_deleted.reload.count != 0, "There should be an other record"
+    assert ParanoidModelWithForeignKeyBelong.with_deleted.reload.count != 0, "There should be a foreign_key record"
   end
 
   def test_restore_with_nil_has_one_association
@@ -561,6 +629,21 @@ class ParanoiaTest < test_framework
     a.restore!
     # This test passes if no exception is raised
     connect! # Reconnect the main connection
+  end
+
+  def test_restore_clear_association_cache_if_associations_present
+    parent = ParentModel.create
+    3.times { parent.very_related_models.create }
+
+    parent.destroy
+
+    assert_equal 0, parent.very_related_models.count
+    assert_equal 0, parent.very_related_models.size
+
+    parent.restore(recursive: true)
+
+    assert_equal 3, parent.very_related_models.count
+    assert_equal 3, parent.very_related_models.size
   end
 
   private
@@ -668,11 +751,31 @@ end
 # refer back to regression test for #118
 class ParanoidModelWithHasOne < ParanoidModel
   has_one :paranoid_model_with_belong, :dependent => :destroy
+  has_one :class_name_belong, :dependent => :destroy, :class_name => "ParanoidModelWithAnthorClassNameBelong"
+  has_one :paranoid_model_with_foreign_key_belong, :dependent => :destroy, :foreign_key => "has_one_foreign_key_id"
 end
 
 class ParanoidModelWithBelong < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :paranoid_model_with_has_one
+end
+
+class ParanoidModelWithAnthorClassNameBelong < ActiveRecord::Base
+  acts_as_paranoid
+  belongs_to :paranoid_model_with_has_one
+end
+
+class ParanoidModelWithForeignKeyBelong < ActiveRecord::Base
+  acts_as_paranoid
+  belongs_to :paranoid_model_with_has_one
+end
+
+class FlaggedModel < PlainModel
+  acts_as_paranoid :flag_column => :is_deleted
+end
+
+class FlaggedModelWithCustomIndex < PlainModel
+  acts_as_paranoid :flag_column => :is_deleted, :indexed_column => :is_deleted
 end
 
 class AsplodeModel < ActiveRecord::Base
