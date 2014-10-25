@@ -136,6 +136,13 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.unscoped.count
   end
 
+  def test_update_columns_on_paranoia_destroyed
+    record = ParentModel.create
+    record.destroy
+
+    assert record.update_columns deleted_at: Time.now
+  end
+
   def test_scoping_behavior_for_paranoid_models
     parent1 = ParentModel.create
     parent2 = ParentModel.create
@@ -160,7 +167,7 @@ class ParanoiaTest < test_framework
     model.destroy
 
     assert_equal false, model.destroyed_at.nil?
-    assert model.destroyed?
+    assert model.paranoia_destroyed?
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
@@ -181,7 +188,7 @@ class ParanoiaTest < test_framework
     model.destroy
 
     assert DateTime.new(0) != model.deleted_at
-    assert model.destroyed?
+    assert model.paranoia_destroyed?
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
@@ -290,13 +297,13 @@ class ParanoiaTest < test_framework
     id = model.id
     model.destroy
 
-    assert model.destroyed?
+    assert model.paranoia_destroyed?
 
     model = ParanoidModel.only_deleted.find(id)
     model.restore!
     model.reload
 
-    assert_equal false, model.destroyed?
+    assert_equal false, model.paranoia_destroyed?
   end
 
   def test_restore_on_object_return_self
@@ -336,7 +343,7 @@ class ParanoiaTest < test_framework
     id = model.id
     model.destroy
 
-    assert model.destroyed?
+    assert model.paranoia_destroyed?
 
     model = CallbackModel.only_deleted.find(id)
     model.restore!
@@ -417,9 +424,9 @@ class ParanoiaTest < test_framework
     b.reload
     c.reload
 
-    refute a.destroyed?
-    assert b.destroyed?
-    refute c.destroyed?
+    refute a.paranoia_destroyed?
+    assert b.paranoia_destroyed?
+    refute c.paranoia_destroyed?
   end
 
   def test_restore_with_associations
