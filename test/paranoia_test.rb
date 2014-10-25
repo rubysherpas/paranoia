@@ -9,6 +9,10 @@ else
 end
 require File.expand_path(File.dirname(__FILE__) + "/../lib/paranoia")
 
+if ActiveRecord::VERSION::STRING >= "4.2"
+  ActiveRecord::Base.raise_in_transactional_callbacks = true
+end
+
 def connect!
   ActiveRecord::Base.establish_connection :adapter => 'sqlite3', database: ':memory:'
   ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
