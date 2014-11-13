@@ -154,6 +154,7 @@ end
 
 class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
+    raise "primary key required for "+self.name unless self.primary_key
     alias :destroy! :destroy
     alias :delete! :delete
     def really_destroy!
