@@ -15,9 +15,11 @@ def setup!
   ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_build_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_and_build_id INTEGER, name VARCHAR(32))'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_anthor_class_name_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_foreign_key_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, has_one_foreign_key_id INTEGER)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE not_paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, paranoid_model_with_has_one_id INTEGER)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_has_one_and_builds (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, color VARCHAR(32), deleted_at DATETIME, has_one_foreign_key_id INTEGER)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
   ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
@@ -212,6 +214,11 @@ class ParanoiaTest < test_framework
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
+  end
+
+  def test_destroy_behavior_for_has_one_with_build_and_validation_error
+    model = ParanoidModelWithHasOneAndBuild.create
+    model.destroy
   end
 
   # Regression test for #24
@@ -861,6 +868,23 @@ class ParanoidModelWithHasOne < ParanoidModel
   has_one :class_name_belong, :dependent => :destroy, :class_name => "ParanoidModelWithAnthorClassNameBelong"
   has_one :paranoid_model_with_foreign_key_belong, :dependent => :destroy, :foreign_key => "has_one_foreign_key_id"
   has_one :not_paranoid_model_with_belong, :dependent => :destroy
+end
+
+class ParanoidModelWithHasOneAndBuild < ActiveRecord::Base
+  has_one :paranoid_model_with_build_belong, :dependent => :destroy
+  validates :color, :presence => true
+  after_validation :build_paranoid_model_with_build_belong, on: :create
+
+  private
+  def build_paranoid_model_with_build_belong
+    super.tap { |child| child.name = "foo" }
+  end
+end
+
+class ParanoidModelWithBuildBelong < ActiveRecord::Base
+  acts_as_paranoid
+  validates :name, :presence => true
+  belongs_to :paranoid_model_with_has_one_and_build
 end
 
 class ParanoidModelWithBelong < ActiveRecord::Base
