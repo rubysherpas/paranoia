@@ -28,6 +28,7 @@ def connect!
   ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE custom_sentinel_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME NOT NULL)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE idless_models (deleted_at DATETIME)'
 end
 
 class WithDifferentConnection < ActiveRecord::Base
@@ -620,6 +621,12 @@ class ParanoiaTest < test_framework
     assert_equal 3, parent.very_related_models.size
   end
 
+  def test_model_without_primary_key
+    assert_raises(RuntimeError) do
+      IdlessModel.class_eval{ acts_as_paranoid }
+    end
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
@@ -757,4 +764,7 @@ class AsplodeModel < ActiveRecord::Base
   before_destroy do |r|
     raise StandardError, 'ASPLODE!'
   end
+end
+
+class IdlessModel < ActiveRecord::Base
 end
