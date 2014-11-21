@@ -348,9 +348,15 @@ class ParanoiaTest < test_framework
 
   def test_real_destroy_dependent_destroy
     parent = ParentModel.create
-    child = parent.very_related_models.create
+    child1 = parent.very_related_models.create
+    child2 = parent.non_paranoid_models.create
+    child3 = parent.create_non_paranoid_model
+
     parent.really_destroy!
-    refute RelatedModel.unscoped.exists?(child.id)
+
+    refute RelatedModel.unscoped.exists?(child1.id)
+    refute NonParanoidModel.unscoped.exists?(child2.id)
+    refute NonParanoidModel.unscoped.exists?(child3.id)
   end
 
   def test_real_destroy_dependent_destroy_after_normal_destroy
@@ -532,22 +538,22 @@ class ParanoiaTest < test_framework
 
     # Does it raise NoMethodException on restore of nil
     hasOne.restore(:recursive => true)
-    
+
     assert hasOne.reload.deleted_at.nil?
   end
-  
+
   # covers #131
   def test_has_one_really_destroy_with_nil
     model = ParanoidModelWithHasOne.create
     model.really_destroy!
-    
+
     refute ParanoidModelWithBelong.unscoped.exists?(model.id)
   end
-  
+
   def test_has_one_really_destroy_with_record
     model = ParanoidModelWithHasOne.create { |record| record.build_paranoid_model_with_belong }
     model.really_destroy!
-    
+
     refute ParanoidModelWithBelong.unscoped.exists?(model.id)
   end
 
@@ -678,6 +684,7 @@ class ParentModel < ActiveRecord::Base
   has_many :related_models
   has_many :very_related_models, :class_name => 'RelatedModel', dependent: :destroy
   has_many :non_paranoid_models, dependent: :destroy
+  has_one :non_paranoid_model, dependent: :destroy
   has_many :asplode_models, dependent: :destroy
 end
 
