@@ -183,7 +183,10 @@ class ActiveRecord::Base
 
     self.paranoia_column = (options[:column] || :deleted_at).to_s
     self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
-    default_scope { where(table_name => { paranoia_column => paranoia_sentinel_value }) }
+    def self.paranoia_scope
+      where(table_name => { paranoia_column => paranoia_sentinel_value })
+    end
+    default_scope { paranoia_scope }
 
     before_restore {
       self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
