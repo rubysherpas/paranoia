@@ -625,6 +625,14 @@ class ParanoiaTest < test_framework
     assert_equal 3, parent.very_related_models.size
   end
 
+  def test_model_without_db_connection
+    ActiveRecord::Base.remove_connection
+
+    NoConnectionModel.class_eval{ acts_as_paranoid }
+  ensure
+    setup!
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
@@ -762,4 +770,7 @@ class AsplodeModel < ActiveRecord::Base
   before_destroy do |r|
     raise StandardError, 'ASPLODE!'
   end
+end
+
+class NoConnectionModel < ActiveRecord::Base
 end
