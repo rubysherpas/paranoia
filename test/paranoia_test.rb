@@ -11,6 +11,10 @@ require File.expand_path(File.dirname(__FILE__) + "/../lib/paranoia")
 
 def connect!
   ActiveRecord::Base.establish_connection :adapter => 'sqlite3', database: ':memory:'
+end
+
+def setup!
+  connect!
   ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
@@ -36,7 +40,7 @@ class WithDifferentConnection < ActiveRecord::Base
   acts_as_paranoid
 end
 
-connect!
+setup!
 
 class ParanoiaTest < test_framework
   def setup
@@ -602,7 +606,8 @@ class ParanoiaTest < test_framework
     a.destroy!
     a.restore!
     # This test passes if no exception is raised
-    connect! # Reconnect the main connection
+  ensure
+    setup! # Reconnect the main connection
   end
 
   def test_restore_clear_association_cache_if_associations_present
