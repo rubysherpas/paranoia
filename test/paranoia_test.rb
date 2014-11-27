@@ -538,7 +538,25 @@ class ParanoiaTest < test_framework
     
     assert hasOne.reload.deleted_at.nil?
   end
-  
+
+  # covers #185
+  def test_restoring_recursive_has_one_restores_correct_object
+    hasOnes = 2.times.map { ParanoidModelWithHasOne.create }
+    belongsTos = 2.times.map { ParanoidModelWithBelong.create }
+    hasOnes.each_with_index { |ho, i| ho.update paranoid_model_with_belong: belongsTos[i] }
+    hasOnes.each { |ho| ho.destroy }
+
+    ParanoidModelWithHasOne.restore(hasOnes[1], :recursive => true)
+    hasOnes.each { |ho| ho.reload }
+    belongsTos.each { |bt| bt.reload }
+
+    # without #185, belongsTos[0] will be restored instead of belongsTos[1]
+    assert_equal false, hasOnes[0].deleted_at.nil?
+    assert_equal false, belongsTos[0].deleted_at.nil?
+    assert_equal true,  hasOnes[1].deleted_at.nil?
+    assert_equal true,  belongsTos[1].deleted_at.nil?
+  end
+
   # covers #131
   def test_has_one_really_destroy_with_nil
     model = ParanoidModelWithHasOne.create
