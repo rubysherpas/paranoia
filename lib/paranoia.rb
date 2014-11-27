@@ -144,7 +144,12 @@ module Paranoia
       if association_data.nil? && association.macro.to_s == "has_one"
         association_class_name = association.options[:class_name].present? ? association.options[:class_name] : association.name.to_s.camelize
         association_foreign_key = association.options[:foreign_key].present? ? association.options[:foreign_key] : "#{self.class.name.to_s.underscore}_id"
-        Object.const_get(association_class_name).only_deleted.where(association_foreign_key, self.id).first.try(:restore, recursive: true)
+
+        association_class = Object.const_get(association_class_name)
+
+        if association_class.respond_to?(:only_deleted)
+          association_class.only_deleted.where(association_foreign_key, self.id).first.try(:restore, recursive: true)
+        end
       end
     end
 
@@ -156,6 +161,7 @@ class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
     alias :destroy! :destroy
     alias :delete! :delete
+
     def really_destroy!
       dependent_reflections = self.class.reflections.select do |name, reflection|
         reflection.options[:dependent] == :destroy
@@ -173,7 +179,11 @@ class ActiveRecord::Base
           end
         end
       end
-      touch_paranoia_column if ActiveRecord::VERSION::STRING >= "4.1"
+
+      if ActiveRecord::VERSION::STRING >= "4.1" && respond_to?(:touch_paranoia_column, true)
+        touch_paranoia_column
+      end
+
       destroy!
     end
 
