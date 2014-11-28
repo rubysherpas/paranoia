@@ -543,18 +543,21 @@ class ParanoiaTest < test_framework
   def test_restoring_recursive_has_one_restores_correct_object
     hasOnes = 2.times.map { ParanoidModelWithHasOne.create }
     belongsTos = 2.times.map { ParanoidModelWithBelong.create }
-    hasOnes.each_with_index { |ho, i| ho.update paranoid_model_with_belong: belongsTos[i] }
-    hasOnes.each { |ho| ho.destroy }
+
+    hasOnes[0].update paranoid_model_with_belong: belongsTos[0]
+    hasOnes[1].update paranoid_model_with_belong: belongsTos[1]
+
+    hasOnes.each(&:destroy)
 
     ParanoidModelWithHasOne.restore(hasOnes[1], :recursive => true)
-    hasOnes.each { |ho| ho.reload }
-    belongsTos.each { |bt| bt.reload }
+    hasOnes.each(&:reload)
+    belongsTos.each(&:reload)
 
     # without #185, belongsTos[0] will be restored instead of belongsTos[1]
-    assert_equal false, hasOnes[0].deleted_at.nil?
-    assert_equal false, belongsTos[0].deleted_at.nil?
-    assert_equal true,  hasOnes[1].deleted_at.nil?
-    assert_equal true,  belongsTos[1].deleted_at.nil?
+    refute_nil hasOnes[0].deleted_at
+    refute_nil belongsTos[0].deleted_at
+    assert_nil hasOnes[1].deleted_at
+    assert_nil belongsTos[1].deleted_at
   end
 
   # covers #131
