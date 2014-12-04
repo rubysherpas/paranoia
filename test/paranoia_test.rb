@@ -11,6 +11,10 @@ require File.expand_path(File.dirname(__FILE__) + "/../lib/paranoia")
 
 def connect!
   ActiveRecord::Base.establish_connection :adapter => 'sqlite3', database: ':memory:'
+end
+
+def setup!
+  connect!
   ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
@@ -37,7 +41,7 @@ class WithDifferentConnection < ActiveRecord::Base
   acts_as_paranoid
 end
 
-connect!
+setup!
 
 class ParanoiaTest < test_framework
   def setup
@@ -562,6 +566,27 @@ class ParanoiaTest < test_framework
     assert hasOne.reload.deleted_at.nil?
   end
 
+  # covers #185
+  def test_restoring_recursive_has_one_restores_correct_object
+    hasOnes = 2.times.map { ParanoidModelWithHasOne.create }
+    belongsTos = 2.times.map { ParanoidModelWithBelong.create }
+
+    hasOnes[0].update paranoid_model_with_belong: belongsTos[0]
+    hasOnes[1].update paranoid_model_with_belong: belongsTos[1]
+
+    hasOnes.each(&:destroy)
+
+    ParanoidModelWithHasOne.restore(hasOnes[1], :recursive => true)
+    hasOnes.each(&:reload)
+    belongsTos.each(&:reload)
+
+    # without #185, belongsTos[0] will be restored instead of belongsTos[1]
+    refute_nil hasOnes[0].deleted_at
+    refute_nil belongsTos[0].deleted_at
+    assert_nil hasOnes[1].deleted_at
+    assert_nil belongsTos[1].deleted_at
+  end
+
   # covers #131
   def test_has_one_really_destroy_with_nil
     model = ParanoidModelWithHasOne.create
@@ -629,7 +654,8 @@ class ParanoiaTest < test_framework
     a.destroy!
     a.restore!
     # This test passes if no exception is raised
-    connect! # Reconnect the main connection
+  ensure
+    setup! # Reconnect the main connection
   end
 
   def test_restore_clear_association_cache_if_associations_present
@@ -658,6 +684,14 @@ class ParanoiaTest < test_framework
     parent.restore(recursive: true)
 
     assert_equal 1, polymorphic.class.count
+  end
+
+  def test_model_without_db_connection
+    ActiveRecord::Base.remove_connection
+
+    NoConnectionModel.class_eval{ acts_as_paranoid }
+  ensure
+    setup!
   end
 
   private
@@ -803,4 +837,7 @@ end
 class PolymorphicModel < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :parent, polymorphic: true
+end
+
+class NoConnectionModel < ActiveRecord::Base
 end

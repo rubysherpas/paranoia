@@ -204,7 +204,10 @@ class ActiveRecord::Base
     self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
     self.paranoia_dependent_recovery_window = options[:dependent_recovery_window] || Paranoia.default_dependent_recovery_window
 
-    default_scope { where(table_name => { paranoia_column => paranoia_sentinel_value}) }
+    def self.paranoia_scope
+      where(table_name => { paranoia_column => paranoia_sentinel_value })
+    end
+    default_scope { paranoia_scope }
 
     before_restore {
       self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
