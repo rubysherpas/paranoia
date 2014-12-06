@@ -535,7 +535,7 @@ class ParanoiaTest < test_framework
 
     # Does it raise NoMethodException on restore of nil
     hasOne.restore(:recursive => true)
-    
+
     assert hasOne.reload.deleted_at.nil?
   end
 
@@ -549,7 +549,7 @@ class ParanoiaTest < test_framework
 
     hasOnes.each(&:destroy)
 
-    ParanoidModelWithHasOne.restore(hasOnes[1], :recursive => true)
+    ParanoidModelWithHasOne.restore(hasOnes[1].id, :recursive => true)
     hasOnes.each(&:reload)
     belongsTos.each(&:reload)
 
@@ -564,14 +564,14 @@ class ParanoiaTest < test_framework
   def test_has_one_really_destroy_with_nil
     model = ParanoidModelWithHasOne.create
     model.really_destroy!
-    
+
     refute ParanoidModelWithBelong.unscoped.exists?(model.id)
   end
-  
+
   def test_has_one_really_destroy_with_record
     model = ParanoidModelWithHasOne.create { |record| record.build_paranoid_model_with_belong }
     model.really_destroy!
-    
+
     refute ParanoidModelWithBelong.unscoped.exists?(model.id)
   end
 
