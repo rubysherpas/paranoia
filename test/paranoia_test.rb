@@ -1,4 +1,5 @@
 require 'active_record'
+ActiveRecord::Base.raise_in_transactional_callbacks = true if ActiveRecord::VERSION::STRING >= '4.2'
 
 test_framework = if ActiveRecord::VERSION::STRING >= "4.1"
   require 'minitest/autorun'
