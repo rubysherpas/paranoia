@@ -69,6 +69,32 @@ module Paranoia
         touch_paranoia_column
       end
     end
+
+    if callbacks_result
+      if ActiveRecord::VERSION::STRING >= '4.2'
+        each_counter_cached_associations do |association|
+          foreign_key = association.reflection.foreign_key.to_sym
+          unless destroyed_by_association && destroyed_by_association.foreign_key.to_sym == foreign_key
+            if send(association.reflection.name)
+              association.decrement_counters
+            end
+          end
+        end
+      end
+      self
+    else
+      false
+    end
+  end
+
+  # As of Rails 4.1.0 +destroy!+ will no longer remove the record from the db
+  # unless you touch the paranoia column before.
+  # We need to override it here otherwise children records might be removed
+  # when they shouldn't
+  if ActiveRecord::VERSION::STRING >= "4.1"
+    def destroy!
+      destroyed? ? super : destroy || raise(ActiveRecord::RecordNotDestroyed)
+    end
   end
 
   def delete
