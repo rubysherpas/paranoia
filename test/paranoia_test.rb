@@ -776,6 +776,19 @@ class ParanoiaTest < test_framework
     # assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
   end
 
+  def test_callbacks_for_counter_cache_column_update_on_destroy
+    parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+    related_model = parent_model_with_counter_cache_column.related_models.create
+
+    assert_equal nil, related_model.instance_variable_get(:@after_destroy_callback_called)
+    assert_equal nil, related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+
+    related_model.destroy
+
+    assert related_model.instance_variable_get(:@after_destroy_callback_called)
+    assert related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+  end
+
   # TODO: find a fix for Rails 4.1
   if ActiveRecord::VERSION::STRING !~ /\A4\.1/
     def test_counter_cache_column_update_on_really_destroy
@@ -785,6 +798,22 @@ class ParanoiaTest < test_framework
       assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
       related_model.really_destroy!
       assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+    end
+  end
+
+  # TODO: find a fix for Rails 4.0 and 4.1
+  if ActiveRecord::VERSION::STRING >= '4.2'
+    def test_callbacks_for_counter_cache_column_update_on_really_destroy!
+      parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+      related_model = parent_model_with_counter_cache_column.related_models.create
+
+      assert_equal nil, related_model.instance_variable_get(:@after_destroy_callback_called)
+      assert_equal nil, related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+
+      related_model.really_destroy!
+
+      assert related_model.instance_variable_get(:@after_destroy_callback_called)
+      assert related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
     end
   end
 
@@ -852,6 +881,19 @@ class RelatedModel < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :parent_model
   belongs_to :parent_model_with_counter_cache_column, counter_cache: true
+
+  after_destroy do |model|
+    if parent_model_with_counter_cache_column && parent_model_with_counter_cache_column.reload.related_models_count == 0
+      model.instance_variable_set :@after_destroy_callback_called, true
+    end
+  end
+  after_commit :set_after_commit_on_destroy_callback_called, on: :destroy
+
+  def set_after_commit_on_destroy_callback_called
+    if parent_model_with_counter_cache_column && parent_model_with_counter_cache_column.reload.related_models_count == 0
+      self.instance_variable_set :@after_commit_on_destroy_callback_called, true
+    end
+  end
 end
 
 class Employer < ActiveRecord::Base
