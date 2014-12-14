@@ -34,6 +34,11 @@ module Paranoia
     alias :deleted :only_deleted
 
     def restore(id, opts = {})
+      if ActiveRecord::Base === id
+        id = id.id
+        ActiveSupport::Deprecation.warn("You are passing an instance of ActiveRecord::Base to `restore`. " \
+                                        "Please pass the id of the object by calling `.id`")
+      end
       Array(id).flatten.map { |one_id| only_deleted.find(one_id).restore!(opts) }
     end
   end
