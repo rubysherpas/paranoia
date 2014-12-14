@@ -12,6 +12,7 @@ end
 
 def setup!
   connect!
+  ActiveRecord::Base.connection.execute 'CREATE TABLE parent_model_with_counter_cache_columns (id INTEGER NOT NULL PRIMARY KEY, related_models_count INTEGER DEFAULT 0)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
@@ -24,7 +25,7 @@ def setup!
   ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE fail_callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, parent_model_with_counter_cache_column_id INTEGER, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE asplode_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
@@ -758,6 +759,28 @@ class ParanoiaTest < test_framework
     assert_equal 0, polymorphic.class.count
   end
 
+  def test_counter_cache_column_update_on_destroy#_and_restore_and_really_destroy
+    parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+    related_model = parent_model_with_counter_cache_column.related_models.create
+
+    assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
+    related_model.destroy
+    assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+    # related_model.restore
+    # assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
+    # related_model.really_destroy!
+    # assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+  end
+
+  def test_counter_cache_column_update_on_really_destroy
+    parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+    related_model = parent_model_with_counter_cache_column.related_models.create
+
+    assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
+    related_model.really_destroy!
+    assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
@@ -814,9 +837,14 @@ class ParentModel < ActiveRecord::Base
   has_one :polymorphic_model, as: :parent, dependent: :destroy
 end
 
+class ParentModelWithCounterCacheColumn < ActiveRecord::Base
+  has_many :related_models
+end
+
 class RelatedModel < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :parent_model
+  belongs_to :parent_model_with_counter_cache_column, counter_cache: true
 end
 
 class Employer < ActiveRecord::Base
