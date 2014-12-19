@@ -205,7 +205,7 @@ Paranoia.default_sentinel_value = DateTime.new(0)
 
 ## Testing with Rspec
 
-You can use shared examples to help test that models are including `acts_as_paranoid` properly. For example, the following shared examples can be created in `spec/support/shared_examples/paranoid_examples.rb`:
+You can use shared examples to help test that models are including `acts_as_paranoid` properly. For example, the following shared examples can be created in `spec/support/shared_examples/paranoia_examples.rb`:
 
 ```ruby
 shared_examples_for 'a Paranoid model' do
