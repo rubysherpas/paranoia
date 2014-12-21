@@ -203,6 +203,27 @@ or globally in a rails initializer, e.g. `config/initializer/paranoia.rb`
 Paranoia.default_sentinel_value = DateTime.new(0)
 ```
 
+## Inheriting from an Abstract Class
+
+If you have a abstract base class that other classes inherit from, you cannot add `acts_as_paranoid` on the Abstract Class, otherwise you will get an empty table name in the query:
+
+```ruby
+class BaseClass < ActiveRecord::Base
+  self.abstract_class = true
+  
+  acts_as_paranoid
+end
+
+class InheritedClass < BaseClass
+end
+
+>> InheritedClass.scoped.where_sql
+# => "WHERE (``.deleted_at IS NULL)"
+```
+
+You have to put the `acts_as_paranoid` on the `InheritedClass` for it to use the correct table name in the scope.
+
+
 ## License
 
 This gem is released under the MIT license.
