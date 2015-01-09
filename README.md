@@ -140,6 +140,8 @@ If you want to check if a record is soft-deleted:
 
 ``` ruby
 client.destroyed?
+# or
+client.deleted?
 ```
 
 If you want to restore a record:
