@@ -8,3 +8,4 @@ rvm:
 env:
   - RAILS='~> 4.0.8'
   - RAILS='~> 4.1.4'
+  - RAILS=master

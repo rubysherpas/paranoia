@@ -71,7 +71,7 @@ module Paranoia
   # when they shouldn't
   if ActiveRecord::VERSION::STRING >= "4.1"
     def destroy!
-      destroyed? ? super : destroy || raise(ActiveRecord::RecordNotDestroyed)
+      paranoia_destroyed? ? super : destroy || raise(ActiveRecord::RecordNotDestroyed)
     end
   end
 
@@ -98,10 +98,10 @@ module Paranoia
   end
   alias :restore :restore!
 
-  def destroyed?
+  def paranoia_destroyed?
     send(paranoia_column) != paranoia_sentinel_value
   end
-  alias :deleted? :destroyed?
+  alias :deleted? :paranoia_destroyed?
 
   private
 
