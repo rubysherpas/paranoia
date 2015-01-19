@@ -671,6 +671,21 @@ class ParanoiaTest < test_framework
     assert_equal 1, polymorphic.class.count
   end
 
+  # Ensure that we're checking parent_type when restoring
+  def test_missing_restore_recursive_on_polymorphic_has_one_association
+    parent = ParentModel.create
+    polymorphic = PolymorphicModel.create(parent_id: parent.id, parent_type: 'ParanoidModel')
+
+    parent.destroy
+    polymorphic.destroy
+
+    assert_equal 0, polymorphic.class.count
+
+    parent.restore(recursive: true)
+
+    assert_equal 0, polymorphic.class.count
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
