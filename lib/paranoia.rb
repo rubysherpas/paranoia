@@ -152,7 +152,10 @@ module Paranoia
           association_find_conditions = { association_foreign_key => self.id }
         end
 
-        Object.const_get(association_class_name).only_deleted.where(association_find_conditions).first.try(:restore, recursive: true)
+        association_class = Object.const_get(association_class_name)
+        if association_class.paranoid?
+          association_class.only_deleted.where(association_find_conditions).first.try!(:restore, recursive: true)
+        end
       end
     end
 
