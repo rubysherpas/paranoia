@@ -142,8 +142,8 @@ module Paranoia
       end
 
       if association_data.nil? && association.macro.to_s == "has_one"
-        association_class_name = association.options[:class_name].present? ? association.options[:class_name] : association.name.to_s.camelize
-        association_foreign_key = association.foreign_key.present? ? association.foreign_key : "#{self.class.name.to_s.underscore}_id"
+        association_class_name = association.class_name
+        association_foreign_key = association.foreign_key
 
         if association.type
           association_polymorphic_type = association.type
