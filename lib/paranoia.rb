@@ -59,7 +59,7 @@ module Paranoia
   def destroy
     callbacks_result = transaction do
       run_callbacks(:destroy) do
-        touch_paranoia_column
+        touch_paranoia_column unless new_record?
       end
     end
     callbacks_result ? self : false
