@@ -1,5 +1,14 @@
 # paranoia Changelog
 
+## 2.0.5 (Unreleased)
+
+### Bug fixes
+
+* Fix restoring polymorphic has_one relationships [#189](https://github.com/radar/paranoia/pull/189) [#174](https://github.com/radar/paranoia/issues/174) [Patrick Koperwas](https://github.com/PatKoperwas)
+* Fix errors when restoring a model with a has_one against a non-paranoid model. [#168](https://github.com/radar/paranoia/pull/168) [Shreyas Agarwal](https://github.com/shreyas123)
+* Fix rspec 2 compatibility [#197](https://github.com/radar/paranoia/pull/197) [Emil Sågfors](https://github.com/lime)
+* Fix some deprecation warnings on rails 4.2 [Sergey Alekseev](https://github.com/sergey-alekseev)
+
 ## 2.0.4 (2014-12-02)
 
 ### Features
