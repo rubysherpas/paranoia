@@ -170,15 +170,16 @@ class ActiveRecord::Base
         reflection.options[:dependent] == :destroy
       end
       if dependent_reflections.any?
-        dependent_reflections.each do |name, _|
-          associated_records = self.send(name)
+        dependent_reflections.each do |name, reflection|
+          association_data = self.send(name)
           # has_one association can return nil
-          if associated_records && associated_records.respond_to?(:with_deleted)
-            # Paranoid models will have this method, non-paranoid models will not
-            associated_records.with_deleted.each(&:really_destroy!)
-            self.send(name).reload
-          elsif associated_records && !associated_records.respond_to?(:each) # single record
-            associated_records.really_destroy!
+          # .paranoid? will work for both instances and classes
+          if association_data && association_data.paranoid?
+            if reflection.collection?
+              association_data.with_deleted.each(&:really_destroy!)
+            else
+              association_data.really_destroy!
+            end
           end
         end
       end
