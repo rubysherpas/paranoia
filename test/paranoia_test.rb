@@ -1,13 +1,9 @@
 require 'active_record'
 ActiveRecord::Base.raise_in_transactional_callbacks = true if ActiveRecord::VERSION::STRING >= '4.2'
 
-test_framework = if ActiveRecord::VERSION::STRING >= "4.1"
-  require 'minitest/autorun'
-  MiniTest::Test
-else
-  require 'test/unit'
-  Test::Unit::TestCase
-end
+require 'minitest/autorun'
+test_framework = defined?(MiniTest::Test) ? MiniTest::Test : MiniTest::Unit::TestCase
+
 require File.expand_path(File.dirname(__FILE__) + "/../lib/paranoia")
 
 def connect!
