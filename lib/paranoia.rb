@@ -98,13 +98,10 @@ module Paranoia
   # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
   def touch_paranoia_column(with_transaction=false)
     raise ActiveRecord::ReadOnlyRecord, "#{self.class} is marked as readonly" if readonly?
-    return self if really_destroyed? || new_record?
-
-    # This method is (potentially) called from really_destroy
-    # The object the method is being called on may be frozen
-    # Let's not touch it if it's frozen.
-    unless self.frozen?
+    if persisted?
       touch(paranoia_column)
+    elsif !frozen?
+      write_attribute(paranoia_column, current_time_from_proper_timezone)
     end
     self
   end
@@ -175,7 +172,7 @@ class ActiveRecord::Base
           end
         end
       end
-      touch_paranoia_column if ActiveRecord::VERSION::STRING >= "4.1"
+      write_attribute(paranoia_column, current_time_from_proper_timezone)
       destroy_without_paranoia
     end
 
