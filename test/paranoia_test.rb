@@ -407,15 +407,6 @@ class ParanoiaTest < test_framework
     assert RelatedModel.unscoped.exists?(child_2.id)
   end
 
-  if ActiveRecord::VERSION::STRING < "4.1"
-    def test_real_destroy
-      model = ParanoidModel.new
-      model.save
-      model.destroy!
-      refute ParanoidModel.unscoped.exists?(model.id)
-    end
-  end
-
   def test_real_delete
     model = ParanoidModel.new
     model.save
