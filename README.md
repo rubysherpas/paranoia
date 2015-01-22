@@ -139,7 +139,7 @@ Client.only_deleted
 If you want to check if a record is soft-deleted:
 
 ``` ruby
-client.destroyed?
+client.paranoia_destroyed?
 # or
 client.deleted?
 ```
