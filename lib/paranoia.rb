@@ -163,7 +163,7 @@ end
 class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
     alias :really_destroyed? :destroyed?
-    alias :destroy! :destroy
+    alias :destroy_without_paranoia :destroy
     alias :delete! :delete
     def really_destroy!
       dependent_reflections = self.class.reflections.select do |name, reflection|
@@ -184,7 +184,7 @@ class ActiveRecord::Base
         end
       end
       touch_paranoia_column if ActiveRecord::VERSION::STRING >= "4.1"
-      destroy!
+      destroy_without_paranoia
     end
 
     include Paranoia
