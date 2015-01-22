@@ -339,6 +339,16 @@ class ParanoiaTest < test_framework
     assert_equal 1, ParanoidModel.unscoped.where(id: model.id).count
   end
 
+  # Regression test for #92
+  def test_destroy_bang_twice
+    model = ParanoidModel.new
+    model.save!
+    model.destroy!
+    model.destroy!
+
+    assert_equal 1, ParanoidModel.unscoped.where(id: model.id).count
+  end
+
   def test_destroy_return_value_on_success
     model = ParanoidModel.create
     return_value = model.destroy
