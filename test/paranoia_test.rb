@@ -407,10 +407,10 @@ class ParanoiaTest < test_framework
     assert RelatedModel.unscoped.exists?(child_2.id)
   end
 
-  def test_real_delete
+  def test_really_delete
     model = ParanoidModel.new
     model.save
-    model.delete!
+    model.really_delete
 
     refute ParanoidModel.unscoped.exists?(model.id)
   end

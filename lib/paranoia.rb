@@ -154,8 +154,9 @@ end
 class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
     alias :really_destroyed? :destroyed?
+    alias :really_delete :delete
+
     alias :destroy_without_paranoia :destroy
-    alias :delete! :delete
     def really_destroy!
       dependent_reflections = self.class.reflections.select do |name, reflection|
         reflection.options[:dependent] == :destroy
