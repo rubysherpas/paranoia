@@ -57,12 +57,11 @@ module Paranoia
   end
 
   def destroy
-    callbacks_result = transaction do
+    transaction do
       run_callbacks(:destroy) do
         touch_paranoia_column
       end
     end
-    callbacks_result ? self : false
   end
 
   # As of Rails 4.1.0 +destroy!+ will no longer remove the record from the db
@@ -76,8 +75,7 @@ module Paranoia
   end
 
   def delete
-    return if new_record?
-    touch_paranoia_column(false)
+    touch_paranoia_column
   end
 
   def restore!(opts = {})
@@ -109,16 +107,15 @@ module Paranoia
   # insert time to paranoia column.
   # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
   def touch_paranoia_column(with_transaction=false)
+    return self if really_destroyed? || new_record?
+
     # This method is (potentially) called from really_destroy
     # The object the method is being called on may be frozen
     # Let's not touch it if it's frozen.
     unless self.frozen?
-      if with_transaction
-        with_transaction_returning_status { touch(paranoia_column) }
-      else
-        touch(paranoia_column)
-      end
+      touch(paranoia_column)
     end
+    self
   end
 
   # restore associated records that have been soft deleted when
