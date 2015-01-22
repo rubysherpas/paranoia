@@ -1,6 +1,6 @@
 # paranoia Changelog
 
-## 2.0.5 (Unreleased)
+## 2.0.5 (2015-01-22)
 
 ### Bug fixes
 
