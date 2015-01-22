@@ -291,6 +291,22 @@ class ParanoiaTest < test_framework
     assert model.instance_variable_get(:@destroy_callback_called)
   end
 
+  def test_destroy_on_readonly_record
+    # Just to demonstrate the AR behaviour
+    model = NonParanoidModel.create!
+    model.readonly!
+    assert_raises ActiveRecord::ReadOnlyRecord do
+      model.destroy
+    end
+
+    # Mirrors behaviour above
+    model = ParanoidModel.create!
+    model.readonly!
+    assert_raises ActiveRecord::ReadOnlyRecord do
+      model.destroy
+    end
+  end
+
   def test_restore
     model = ParanoidModel.new
     model.save

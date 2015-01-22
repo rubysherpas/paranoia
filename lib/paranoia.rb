@@ -107,6 +107,7 @@ module Paranoia
   # insert time to paranoia column.
   # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
   def touch_paranoia_column(with_transaction=false)
+    raise ActiveRecord::ReadOnlyRecord, "#{self.class} is marked as readonly" if readonly?
     return self if really_destroyed? || new_record?
 
     # This method is (potentially) called from really_destroy
