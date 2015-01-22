@@ -210,13 +210,6 @@ class ActiveRecord::Base
   def self.paranoid? ; false ; end
   def paranoid? ; self.class.paranoid? ; end
 
-  # Override the persisted method to allow for the paranoia gem.
-  # If a paranoid record is selected, then we only want to check
-  # if it's a new record, not if it is "destroyed".
-  def persisted?
-    paranoid? ? !new_record? : super
-  end
-
   private
 
   def paranoia_column
