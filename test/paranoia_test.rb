@@ -791,6 +791,8 @@ class ParanoiaTest < test_framework
   def test_deleted_by_scope
     deleted_by_id = 5
     record = TrackableModel.create!
+    # record 2:
+    TrackableModel.create!
     record.destroy(deleted_by_id: deleted_by_id)
     relation = TrackableModel.deleted_by(deleted_by_id)
     assert_equal 1, relation.count

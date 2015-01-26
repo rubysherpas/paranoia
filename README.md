@@ -168,6 +168,56 @@ If you want callbacks to trigger before a restore:
 before_restore :callback_name_goes_here
 ```
 
+#### Tracking
+
+If you want to track who deleted the record, your migration should look like this:
+``` shell
+bundle exec rails g migration add_deleted_at_and_deleted_by_to_clients deleted_at:datetime:index deleted_by:integer:index
+```
+
+migration file:
+
+``` ruby
+class AddDeletedAtAndDeletedByToClients < ActiveRecord::Migration
+  def change
+    add_column :users, :deleted_at, :datetime
+    add_index :users, :deleted_at
+    add_column :users, :deleted_by, :integer
+    add_index :users, :deleted_by
+  end
+end
+
+in your model:
+
+``` ruby
+class Client < ActiveRecord::Base
+  acts_as_paranoid trackable: true
+
+  ...
+end
+```
+
+Now, you can indicate who deleted the record, passing `deleted_by_id` option into `destroy` method, for example:
+
+``` ruby
+def destroy
+  @client = Client.find(params[:id])
+  @client.destroy(deleted_by_id: current_user.id)
+
+  ...
+end
+```
+
+If you want to use custom column name for destroyer tracking, you can pass it as an option:
+
+``` ruby
+class Client < ActiveRecord::Base
+  acts_as_paranoid trackable: true, trackable_column: :destroyed_by_id
+
+  ...
+end
+```
+
 For more information, please look at the tests.
 
 ## Acts As Paranoid Migration
