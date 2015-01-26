@@ -33,6 +33,8 @@ def setup!
   ActiveRecord::Base.connection.execute 'CREATE TABLE custom_sentinel_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME NOT NULL)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
   ActiveRecord::Base.connection.execute 'CREATE TABLE polymorphic_models (id INTEGER NOT NULL PRIMARY KEY, parent_id INTEGER, parent_type STRING, deleted_at DATETIME)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE trackable_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, deleted_by_id INTEGER)'
+  ActiveRecord::Base.connection.execute 'CREATE TABLE trackable_model_with_destroyed_by_ids (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, destroyed_by_id INTEGER)'
 end
 
 class WithDifferentConnection < ActiveRecord::Base
@@ -758,6 +760,53 @@ class ParanoiaTest < test_framework
     assert_equal 0, polymorphic.class.count
   end
 
+  def test_trackable_model
+    deleted_by_id = 5
+    record = TrackableModel.create!
+    record.destroy(deleted_by_id: deleted_by_id)
+    record.reload
+    assert_equal deleted_by_id, record.deleted_by_id
+    assert record.deleted?
+  end
+
+  def test_trackable_model_with_custom_trackable_column_name
+    deleted_by_id = 5
+    record = TrackableModelWithDestroyedById.create!
+    record.destroy(deleted_by_id: deleted_by_id)
+    record.reload
+    assert_equal deleted_by_id, record.destroyed_by_id
+    assert record.deleted?
+  end
+
+  def test_trackable_model_restore
+    deleted_by_id = 5
+    record = TrackableModel.create!
+    record.destroy(deleted_by_id: deleted_by_id)
+    record.restore!
+    record.reload
+    assert !record.deleted?
+    assert_nil record.deleted_by_id
+  end
+
+  def test_deleted_by_scope
+    deleted_by_id = 5
+    record = TrackableModel.create!
+    # record 2:
+    TrackableModel.create!
+    record.destroy(deleted_by_id: deleted_by_id)
+    relation = TrackableModel.deleted_by(deleted_by_id)
+    assert_equal 1, relation.count
+    assert_equal record, relation.first
+  end
+
+  def test_trackable_model_without_providing_value
+    record = TrackableModel.create!
+    record.destroy
+    record.reload
+    assert record.deleted?
+    assert_nil record.deleted_by_id
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
@@ -929,4 +978,12 @@ end
 class PolymorphicModel < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :parent, polymorphic: true
+end
+
+class TrackableModel < ActiveRecord::Base
+  acts_as_paranoid trackable: true
+end
+
+class TrackableModelWithDestroyedById < ActiveRecord::Base
+  acts_as_paranoid trackable: true, trackable_column: :destroyed_by_id
 end
