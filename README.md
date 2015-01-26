@@ -186,6 +186,7 @@ class AddDeletedAtAndDeletedByToClients < ActiveRecord::Migration
     add_index :users, :deleted_by
   end
 end
+```
 
 in your model:
 
