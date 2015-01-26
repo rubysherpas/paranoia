@@ -33,6 +33,10 @@ module Paranoia
     end
     alias :deleted :only_deleted
 
+    def deleted_by(deleted_by_id)
+      only_deleted.where(paranoia_trackable_column => deleted_by_id)
+    end
+
     def restore(id, opts = {})
       Array(id).flatten.map { |one_id| only_deleted.find(one_id).restore!(opts) }
     end
@@ -76,7 +80,12 @@ module Paranoia
         noop_if_frozen = ActiveRecord.version < Gem::Version.new("4.1")
         if (noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen
           write_attribute paranoia_column, paranoia_sentinel_value
-          update_column paranoia_column, paranoia_sentinel_value
+          if paranoia_trackable?
+            write_attribute paranoia_trackable_column, nil
+            save(validate: false)
+          else
+            update_column paranoia_column, paranoia_sentinel_value
+          end
         end
         restore_associated_records if opts[:recursive]
       end
@@ -98,7 +107,7 @@ module Paranoia
   # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
   def touch_paranoia_column(options = {})
     raise ActiveRecord::ReadOnlyRecord, "#{self.class} is marked as readonly" if readonly?
-    deleted_by = options.delete(:deleted_by)
+    deleted_by = options.delete(:deleted_by_id)
     if persisted?
       if paranoia_trackable? && deleted_by
         touch_with_trackable(deleted_by)
@@ -112,10 +121,12 @@ module Paranoia
     self
   end
 
+  # touch paranoia column and fill trackable column with given value
+  # @param deleted_by value to insert to trackable column
   def touch_with_trackable(deleted_by)
     write_attribute(paranoia_trackable_column, deleted_by)
     write_attribute(paranoia_column, current_time_from_proper_timezone)
-    save
+    save(validate: false)
   end
 
   # restore associated records that have been soft deleted when
@@ -198,7 +209,7 @@ class ActiveRecord::Base
 
     if options[:trackable]
       class_attribute :paranoia_trackable_column
-      self.paranoia_trackable_column = (options[:trackable_column] || :deleted_by).to_s
+      self.paranoia_trackable_column = (options[:trackable_column] || :deleted_by_id).to_s
     end
 
     def self.paranoia_scope
