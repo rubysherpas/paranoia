@@ -124,7 +124,7 @@ def product
 end
 ```
 
-If you want to include associated soft-deleted objects, you can (un)scope the accociation:
+If you want to include associated soft-deleted objects, you can (un)scope the association:
 
 ``` ruby
 class Person < ActiveRecord::Base
