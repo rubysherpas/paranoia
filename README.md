@@ -25,7 +25,7 @@ gem "paranoia", "~> 2.0"
 Of course you can install this from GitHub as well:
 
 ``` ruby
-gem "paranoia", :github => "radar/paranoia", :branch => "master"
+gem "paranoia", :github => "radar/paranoia", :branch => "rails3"
 # or
 gem "paranoia", :github => "radar/paranoia", :branch => "rails4"
 ```
