@@ -770,10 +770,6 @@ class ParanoiaTest < test_framework
     assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
     related_model.destroy
     assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
-    # related_model.restore
-    # assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
-    # related_model.really_destroy!
-    # assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
   end
 
   def test_callbacks_for_counter_cache_column_update_on_destroy
@@ -990,8 +986,6 @@ end
 class FlaggedModelWithCustomIndex < PlainModel
   acts_as_paranoid :flag_column => :is_deleted, :indexed_column => :is_deleted
 end
-
-
 
 class AsplodeModel < ActiveRecord::Base
   acts_as_paranoid
