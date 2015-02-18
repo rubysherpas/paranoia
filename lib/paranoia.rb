@@ -95,8 +95,7 @@ module Paranoia
 
   # touch paranoia column.
   # insert time to paranoia column.
-  # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
-  def touch_paranoia_column(with_transaction=false)
+  def touch_paranoia_column
     raise ActiveRecord::ReadOnlyRecord, "#{self.class} is marked as readonly" if readonly?
     if persisted?
       touch(paranoia_column)
