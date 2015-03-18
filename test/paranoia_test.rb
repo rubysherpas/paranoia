@@ -12,27 +12,32 @@ end
 
 def setup!
   connect!
-  ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_build_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_and_build_id INTEGER, name VARCHAR(32))'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_anthor_class_name_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_foreign_key_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, has_one_foreign_key_id INTEGER)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE not_paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, paranoid_model_with_has_one_id INTEGER)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_has_one_and_builds (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, color VARCHAR(32), deleted_at DATETIME, has_one_foreign_key_id INTEGER)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE fail_callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE asplode_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE custom_sentinel_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME NOT NULL)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
-  ActiveRecord::Base.connection.execute 'CREATE TABLE polymorphic_models (id INTEGER NOT NULL PRIMARY KEY, parent_id INTEGER, parent_type STRING, deleted_at DATETIME)'
+  {
+    'parent_model_with_counter_cache_columns' => 'related_models_count INTEGER DEFAULT 0',
+    'parent_models' => 'deleted_at DATETIME',
+    'paranoid_models' => 'parent_model_id INTEGER, deleted_at DATETIME',
+    'paranoid_model_with_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER',
+    'paranoid_model_with_build_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_and_build_id INTEGER, name VARCHAR(32)',
+    'paranoid_model_with_anthor_class_name_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER',
+    'paranoid_model_with_foreign_key_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, has_one_foreign_key_id INTEGER',
+    'not_paranoid_model_with_belongs' => 'parent_model_id INTEGER, paranoid_model_with_has_one_id INTEGER',
+    'paranoid_model_with_has_one_and_builds' => 'parent_model_id INTEGER, color VARCHAR(32), deleted_at DATETIME, has_one_foreign_key_id INTEGER',
+    'featureful_models' => 'deleted_at DATETIME, name VARCHAR(32)',
+    'plain_models' => 'deleted_at DATETIME',
+    'callback_models' => 'deleted_at DATETIME',
+    'fail_callback_models' => 'deleted_at DATETIME',
+    'related_models' => 'parent_model_id INTEGER, parent_model_with_counter_cache_column_id INTEGER, deleted_at DATETIME',
+    'asplode_models' => 'parent_model_id INTEGER, deleted_at DATETIME',
+    'employers' => 'deleted_at DATETIME',
+    'employees' => 'deleted_at DATETIME',
+    'jobs' => 'employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME',
+    'custom_column_models' => 'destroyed_at DATETIME',
+    'custom_sentinel_models' => 'deleted_at DATETIME NOT NULL',
+    'non_paranoid_models' => 'parent_model_id INTEGER',
+    'polymorphic_models' => 'parent_id INTEGER, parent_type STRING, deleted_at DATETIME'
+  }.each do |table_name, columns_as_sql_string|
+    ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
+  end
 end
 
 class WithDifferentConnection < ActiveRecord::Base
@@ -758,6 +763,56 @@ class ParanoiaTest < test_framework
     assert_equal 0, polymorphic.class.count
   end
 
+  def test_counter_cache_column_update_on_destroy#_and_restore_and_really_destroy
+    parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+    related_model = parent_model_with_counter_cache_column.related_models.create
+
+    assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
+    related_model.destroy
+    assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+  end
+
+  def test_callbacks_for_counter_cache_column_update_on_destroy
+    parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+    related_model = parent_model_with_counter_cache_column.related_models.create
+
+    assert_equal nil, related_model.instance_variable_get(:@after_destroy_callback_called)
+    assert_equal nil, related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+
+    related_model.destroy
+
+    assert related_model.instance_variable_get(:@after_destroy_callback_called)
+    # assert related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+  end
+
+  # TODO: find a fix for Rails 4.1
+  if ActiveRecord::VERSION::STRING !~ /\A4\.1/
+    def test_counter_cache_column_update_on_really_destroy
+      parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+      related_model = parent_model_with_counter_cache_column.related_models.create
+
+      assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
+      related_model.really_destroy!
+      assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+    end
+  end
+
+  # TODO: find a fix for Rails 4.0 and 4.1
+  if ActiveRecord::VERSION::STRING >= '4.2'
+    def test_callbacks_for_counter_cache_column_update_on_really_destroy!
+      parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+      related_model = parent_model_with_counter_cache_column.related_models.create
+
+      assert_equal nil, related_model.instance_variable_get(:@after_destroy_callback_called)
+      assert_equal nil, related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+
+      related_model.really_destroy!
+
+      assert related_model.instance_variable_get(:@after_destroy_callback_called)
+      assert related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+    end
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
@@ -814,9 +869,27 @@ class ParentModel < ActiveRecord::Base
   has_one :polymorphic_model, as: :parent, dependent: :destroy
 end
 
+class ParentModelWithCounterCacheColumn < ActiveRecord::Base
+  has_many :related_models
+end
+
 class RelatedModel < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :parent_model
+  belongs_to :parent_model_with_counter_cache_column, counter_cache: true
+
+  after_destroy do |model|
+    if parent_model_with_counter_cache_column && parent_model_with_counter_cache_column.reload.related_models_count == 0
+      model.instance_variable_set :@after_destroy_callback_called, true
+    end
+  end
+  after_commit :set_after_commit_on_destroy_callback_called, on: :destroy
+
+  def set_after_commit_on_destroy_callback_called
+    if parent_model_with_counter_cache_column && parent_model_with_counter_cache_column.reload.related_models_count == 0
+      self.instance_variable_set :@after_commit_on_destroy_callback_called, true
+    end
+  end
 end
 
 class Employer < ActiveRecord::Base
@@ -913,8 +986,6 @@ end
 class FlaggedModelWithCustomIndex < PlainModel
   acts_as_paranoid :flag_column => :is_deleted, :indexed_column => :is_deleted
 end
-
-
 
 class AsplodeModel < ActiveRecord::Base
   acts_as_paranoid
