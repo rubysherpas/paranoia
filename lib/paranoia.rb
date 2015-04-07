@@ -47,7 +47,7 @@ module Paranoia
 
   module Callbacks
     def self.extended(klazz)
-      %i(restore real_destroy).each do |callback_name|
+      [:restore, :real_destroy].each do |callback_name|
         klazz.define_callbacks callback_name
 
         klazz.define_singleton_method("before_#{callback_name}") do |*args, &block|
