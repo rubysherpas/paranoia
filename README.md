@@ -158,6 +158,8 @@ If you want to restore a record:
 
 ``` ruby
 Client.restore(id)
+# or
+client.restore
 ```
 
 If you want to restore a whole bunch of records:
