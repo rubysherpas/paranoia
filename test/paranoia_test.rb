@@ -451,6 +451,14 @@ class ParanoiaTest < test_framework
     assert RelatedModel.unscoped.exists?(child_2.id)
   end
 
+  def test_really_destroy_behavior_for_callbacks
+    model = CallbackModel.new
+    model.save
+    model.really_destroy!
+
+    assert model.instance_variable_get(:@real_destroy_callback_called)
+  end
+
   def test_really_delete
     model = ParanoidModel.new
     model.save
@@ -843,15 +851,16 @@ end
 
 class CallbackModel < ActiveRecord::Base
   acts_as_paranoid
-  before_destroy {|model| model.instance_variable_set :@destroy_callback_called, true }
-  before_restore {|model| model.instance_variable_set :@restore_callback_called, true }
-  before_update  {|model| model.instance_variable_set :@update_callback_called, true }
-  before_save    {|model| model.instance_variable_set :@save_callback_called, true}
+  before_destroy      { |model| model.instance_variable_set :@destroy_callback_called, true }
+  before_restore      { |model| model.instance_variable_set :@restore_callback_called, true }
+  before_update       { |model| model.instance_variable_set :@update_callback_called, true }
+  before_save         { |model| model.instance_variable_set :@save_callback_called, true}
+  before_real_destroy { |model| model.instance_variable_set :@real_destroy_callback_called, true }
 
-  after_destroy  {|model| model.instance_variable_set :@after_destroy_callback_called, true }
-  after_commit   {|model| model.instance_variable_set :@after_commit_callback_called, true }
+  after_destroy       { |model| model.instance_variable_set :@after_destroy_callback_called, true }
+  after_commit        { |model| model.instance_variable_set :@after_commit_callback_called, true }
 
-  validate       {|model| model.instance_variable_set :@validate_called, true }
+  validate            { |model| model.instance_variable_set :@validate_called, true }
 
   def remove_called_variables
     instance_variables.each {|name| (name.to_s.end_with?('_called')) ? remove_instance_variable(name) : nil}
