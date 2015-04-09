@@ -29,7 +29,7 @@ module Paranoia
     end
 
     def only_deleted
-      with_deleted.where.not(table_name => { paranoia_column => paranoia_sentinel_value} )
+      with_deleted.where.not(paranoia_column => paranoia_sentinel_value)
     end
     alias :deleted :only_deleted
 
@@ -199,7 +199,7 @@ class ActiveRecord::Base
     self.paranoia_column = (options[:column] || :deleted_at).to_s
     self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
     def self.paranoia_scope
-      where(table_name => { paranoia_column => paranoia_sentinel_value })
+      where(paranoia_column => paranoia_sentinel_value)
     end
     default_scope { paranoia_scope }
 
