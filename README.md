@@ -158,6 +158,8 @@ If you want to restore a record:
 
 ``` ruby
 Client.restore(id)
+# or
+client.restore
 ```
 
 If you want to restore a whole bunch of records:
@@ -170,6 +172,8 @@ If you want to restore a record and their dependently destroyed associated recor
 
 ``` ruby
 Client.restore(id, :recursive => true)
+# or
+client.restore(:recursive => true)
 ```
 
 If you want callbacks to trigger before a restore:
