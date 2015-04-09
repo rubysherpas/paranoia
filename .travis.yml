@@ -1,12 +1,11 @@
 language: ruby
 rvm:
-  - 1.9.3
   - 2.0.0
   - 2.1.0
   - 2.2.0
   - jruby-19mode
 
 env:
-  - RAILS='~> 4.0.8'
-  - RAILS='~> 4.1.4'
-  - RAILS='~> 4.2.0'
+  - RAILS='~> 4.0.13'
+  - RAILS='~> 4.1.10'
+  - RAILS='~> 4.2.1'
