@@ -34,7 +34,8 @@ def setup!
     'custom_column_models' => 'destroyed_at DATETIME',
     'custom_sentinel_models' => 'deleted_at DATETIME NOT NULL',
     'non_paranoid_models' => 'parent_model_id INTEGER',
-    'polymorphic_models' => 'parent_id INTEGER, parent_type STRING, deleted_at DATETIME'
+    'polymorphic_models' => 'parent_id INTEGER, parent_type STRING, deleted_at DATETIME',
+    'paranoid_model_without_deleted_columns' => 'foo INTEGER'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -430,6 +431,10 @@ class ParanoiaTest < test_framework
     refute RelatedModel.unscoped.exists?(child1.id)
     refute NonParanoidModel.unscoped.exists?(child2.id)
     refute NonParanoidModel.unscoped.exists?(child3.id)
+  end
+
+  def test_paranoid_model_without_deleted_column
+    assert_equal true, ParanoidModelWithoutDeletedColumn.first.nil?
   end
 
   def test_real_destroy_dependent_destroy_after_normal_destroy
@@ -919,6 +924,10 @@ class CustomSentinelModel < ActiveRecord::Base
 end
 
 class NonParanoidModel < ActiveRecord::Base
+end
+
+class ParanoidModelWithoutDeletedColumn < ActiveRecord::Base
+  acts_as_paranoid
 end
 
 class ParanoidModelWithObservers < ParanoidModel
