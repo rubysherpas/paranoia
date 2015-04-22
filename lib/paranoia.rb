@@ -1,6 +1,8 @@
 require 'active_record' unless defined? ActiveRecord
 
 module Paranoia
+  KNOWN_PARANOIA_TYPES = [:datetime, :boolean]
+  
   @@default_sentinel_value = nil
 
   # Change default_sentinel_value in a rails initilizer
@@ -111,14 +113,28 @@ module Paranoia
 
   private
 
+  def paranoid_deleted_value
+    case self.class.paranoia_type
+    when :datetime
+      current_time_from_proper_timezone
+    when :boolean
+      true
+    end
+  end
+  
   # touch paranoia column.
   # insert time to paranoia column.
   def touch_paranoia_column
     raise ActiveRecord::ReadOnlyRecord, "#{self.class} is marked as readonly" if readonly?
     if persisted?
-      touch(paranoia_column)
+      if paranoia_type == :datetime 
+        touch(paranoia_column)
+      else
+        write_attribute(paranoia_column, paranoid_deleted_value)
+        update_column(paranoia_column, paranoid_deleted_value)
+      end
     elsif !frozen?
-      write_attribute(paranoia_column, current_time_from_proper_timezone)
+      write_attribute(paranoia_column, paranoid_deleted_value)
     end
     self
   end
@@ -194,9 +210,11 @@ class ActiveRecord::Base
     end
 
     include Paranoia
-    class_attribute :paranoia_column, :paranoia_sentinel_value
+    class_attribute :paranoia_column, :paranoia_sentinel_value, :paranoia_type
 
     self.paranoia_column = (options[:column] || :deleted_at).to_s
+    self.paranoia_type = options[:type] || :datetime
+    raise ArgumentError.new("Unknown paranoia_type: #{paranoia_type}") unless Paranoia::KNOWN_PARANOIA_TYPES.include?(paranoia_type)
     self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
     def self.paranoia_scope
       where(paranoia_column => paranoia_sentinel_value)
@@ -234,6 +252,11 @@ class ActiveRecord::Base
   def paranoia_sentinel_value
     self.class.paranoia_sentinel_value
   end
+  
+  def paranoia_type
+    self.class.paranoia_type
+  end
+  
 end
 
 require 'paranoia/rspec' if defined? RSpec

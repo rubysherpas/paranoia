@@ -34,7 +34,8 @@ def setup!
     'custom_column_models' => 'destroyed_at DATETIME',
     'custom_sentinel_models' => 'deleted_at DATETIME NOT NULL',
     'non_paranoid_models' => 'parent_model_id INTEGER',
-    'polymorphic_models' => 'parent_id INTEGER, parent_type STRING, deleted_at DATETIME'
+    'polymorphic_models' => 'parent_id INTEGER, parent_type STRING, deleted_at DATETIME',
+    'boolean_models' => 'is_deleted BOOLEAN'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -813,6 +814,26 @@ class ParanoiaTest < test_framework
     end
   end
 
+  def test_destroy_behavior_for_boolean_models
+    model = BooleanModel.new
+    assert_equal 0, model.class.count
+    model.save!
+    assert_equal false, model.paranoia_destroyed?
+    assert_equal 1, model.class.count
+    model.destroy
+
+    assert_equal true, model.is_deleted
+    assert_equal true, model.paranoia_destroyed?
+    
+    assert_equal 0, model.class.count
+    assert_equal 1, model.class.unscoped.count
+    
+    model.restore
+    assert_equal false, model.is_deleted
+    assert_equal false, model.paranoia_destroyed?
+    assert_equal 1, model.class.count
+  end
+  
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
@@ -977,6 +998,10 @@ end
 
 class NotParanoidModelWithBelong < ActiveRecord::Base
   belongs_to :paranoid_model_with_has_one
+end
+
+class BooleanModel < ActiveRecord::Base
+  acts_as_paranoid :column => :is_deleted, :sentinel_value => false, :type => :boolean
 end
 
 class FlaggedModel < PlainModel
