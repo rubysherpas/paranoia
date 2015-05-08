@@ -34,12 +34,19 @@ module Paranoia
     end
 
     def only_deleted
-      with_deleted.where.not(table_name => { paranoia_column => paranoia_sentinel_value} )
+      with_deleted.where.not(paranoia_column => paranoia_sentinel_value)
     end
     alias :deleted :only_deleted
 
-    def restore(id, opts = {})
-      Array(id).flatten.map { |one_id| only_deleted.find(one_id).restore!(opts) }
+    def restore(id_or_ids, opts = {})
+      ids = Array(id_or_ids).flatten
+      any_object_instead_of_id = ids.any? { |id| ActiveRecord::Base === id }
+      if any_object_instead_of_id
+        ids.map! { |id| ActiveRecord::Base === id ? id.id : id }
+        ActiveSupport::Deprecation.warn("You are passing an instance of ActiveRecord::Base to `restore`. " \
+                                        "Please pass the id of the object by calling `.id`")
+      end
+      ids.map { |id| only_deleted.find(id).restore!(opts) }
     end
   end
 
@@ -64,7 +71,18 @@ module Paranoia
   def destroy
     transaction do
       run_callbacks(:destroy) do
-        touch_paranoia_column unless destroyed?
+        result = touch_paranoia_column
+        if result && ActiveRecord::VERSION::STRING >= '4.2'
+          each_counter_cached_associations do |association|
+            foreign_key = association.reflection.foreign_key.to_sym
+            unless destroyed_by_association && destroyed_by_association.foreign_key.to_sym == foreign_key
+              if send(association.reflection.name)
+                association.decrement_counters
+              end
+            end
+          end
+        end
+        result
       end
     end
   end
@@ -104,8 +122,7 @@ module Paranoia
 
   # touch paranoia column.
   # insert time to paranoia column.
-  # @param with_transaction [Boolean] exec with ActiveRecord Transactions.
-  def touch_paranoia_column(with_transaction=false)
+  def touch_paranoia_column
     raise ActiveRecord::ReadOnlyRecord, "#{self.class} is marked as readonly" if readonly?
     if persisted?
       touch(paranoia_column)
@@ -196,7 +213,7 @@ class ActiveRecord::Base
     self.paranoia_dependent_recovery_window = options[:dependent_recovery_window] || Paranoia.default_dependent_recovery_window
 
     def self.paranoia_scope
-      where(table_name => { paranoia_column => paranoia_sentinel_value })
+      where(paranoia_column => paranoia_sentinel_value)
     end
     default_scope { paranoia_scope }
 

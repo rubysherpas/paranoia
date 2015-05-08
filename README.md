@@ -25,7 +25,7 @@ gem "paranoia", "~> 2.0"
 Of course you can install this from GitHub as well:
 
 ``` ruby
-gem "paranoia", :github => "radar/paranoia", :branch => "master"
+gem "paranoia", :github => "radar/paranoia", :branch => "rails3"
 # or
 gem "paranoia", :github => "radar/paranoia", :branch => "rails4"
 ```
@@ -124,6 +124,16 @@ def product
 end
 ```
 
+If you want to include associated soft-deleted objects, you can (un)scope the association:
+
+``` ruby
+class Person < ActiveRecord::Base
+  belongs_to :group, -> { with_deleted }
+end
+
+Person.includes(:group).all
+```
+
 If you want to find all records, even those which are deleted:
 
 ``` ruby
@@ -148,6 +158,8 @@ If you want to restore a record:
 
 ``` ruby
 Client.restore(id)
+# or
+client.restore
 ```
 
 If you want to restore a whole bunch of records:
@@ -160,6 +172,8 @@ If you want to restore a record and their dependently destroyed associated recor
 
 ``` ruby
 Client.restore(id, :recursive => true)
+# or
+client.restore(:recursive => true)
 ```
 
 If you want callbacks to trigger before a restore:
@@ -183,27 +197,6 @@ You can replace the older `acts_as_paranoid` methods as follows:
 
 The `recover` method in `acts_as_paranoid` runs `update` callbacks.  Paranoia's
 `restore` method does not do this.
-
-## Support for Unique Keys with Null Values
-
-Most databases ignore null columns when it comes to resolving unique index
-constraints.  This means unique constraints that involve nullable columns may be
-problematic. Instead of using `NULL` to represent a not-deleted row, you can pick
-a value that you want paranoia to mean not deleted. Note that you can/should
-now apply a `NOT NULL` constraint to your `deleted_at` column.
-
-Per model:
-
-```ruby
-# pick some value
-acts_as_paranoid sentinel_value: DateTime.new(0)
-```
-
-or globally in a rails initializer, e.g. `config/initializer/paranoia.rb`
-
-```ruby
-Paranoia.default_sentinel_value = DateTime.new(0)
-```
 
 ## License
 
