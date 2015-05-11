@@ -184,6 +184,25 @@ before_restore :callback_name_goes_here
 
 For more information, please look at the tests.
 
+#### About indexes:
+
+Beware that you should adapt all your indexes for them to work as fast as previously.
+For example,
+
+``` ruby
+add_index :clients, :group_id
+add_index :clients, [:group_id, :other_id]
+```
+
+should be replaced with
+
+``` ruby
+add_index :clients, :group_id, where: "deleted_at IS NULL"
+add_index :clients, [:group_id, :other_id], where: "deleted_at IS NULL"
+```
+
+Of course, this is not necessary for the indexes you always use in association with `with_deleted` or `only_deleted`.
+
 ## Acts As Paranoid Migration
 
 You can replace the older `acts_as_paranoid` methods as follows:
