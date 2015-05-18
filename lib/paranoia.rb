@@ -14,9 +14,13 @@ module Paranoia
   end
   
   def self.disabled(&block)
-    @@disabled = true
+    disabled!
     block.call
     @@disabled = false
+  end
+  
+  def self.disabled!
+    @@disabled = true
   end
   
   def self.disabled?
