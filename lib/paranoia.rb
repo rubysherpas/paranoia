@@ -2,6 +2,7 @@ require 'active_record' unless defined? ActiveRecord
 
 module Paranoia
   @@default_sentinel_value = nil
+  @@disabled = false
 
   # Change default_sentinel_value in a rails initilizer
   def self.default_sentinel_value=(val)
@@ -10,6 +11,16 @@ module Paranoia
 
   def self.default_sentinel_value
     @@default_sentinel_value
+  end
+  
+  def self.disabled(&block)
+    @@disabled = true
+    block.call
+    @@disabled = false
+  end
+  
+  def self.disabled?
+    @@disabled == true
   end
 
   def self.included(klazz)
@@ -167,6 +178,8 @@ end
 
 class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
+    return if Paranoia.disabled?
+    
     alias :really_destroyed? :destroyed?
     alias :really_delete :delete
 
