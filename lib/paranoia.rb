@@ -182,8 +182,6 @@ end
 
 class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
-    return if Paranoia.without?
-    
     alias :really_destroyed? :destroyed?
     alias :really_delete :delete
 
