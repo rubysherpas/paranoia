@@ -2,7 +2,7 @@ require 'active_record' unless defined? ActiveRecord
 
 module Paranoia
   @@default_sentinel_value = nil
-  @@disabled = false
+  @@without = false
 
   # Change default_sentinel_value in a rails initilizer
   def self.default_sentinel_value=(val)
@@ -13,18 +13,18 @@ module Paranoia
     @@default_sentinel_value
   end
   
-  def self.disabled(&block)
-    disabled!
+  def self.without(&block)
+    without!
     block.call
-    @@disabled = false
+    @@without = false
   end
   
-  def self.disabled!
-    @@disabled = true
+  def self.without!
+    @@without = true
   end
   
-  def self.disabled?
-    @@disabled == true
+  def self.without?
+    @@without == true
   end
 
   def self.included(klazz)
@@ -182,7 +182,7 @@ end
 
 class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
-    return if Paranoia.disabled?
+    return if Paranoia.without?
     
     alias :really_destroyed? :destroyed?
     alias :really_delete :delete
@@ -216,9 +216,9 @@ class ActiveRecord::Base
     self.paranoia_column = (options[:column] || :deleted_at).to_s
     self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
     def self.paranoia_scope
-      where(paranoia_column => paranoia_sentinel_value)
+      where(paranoia_column => paranoia_sentinel_value) unless Paranoia.without?
     end
-    default_scope { paranoia_scope } unless Paranoia.disabled?
+    default_scope { paranoia_scope }
 
     before_restore {
       self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
