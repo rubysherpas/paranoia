@@ -16,6 +16,8 @@ def setup!
     'parent_model_with_counter_cache_columns' => 'related_models_count INTEGER DEFAULT 0',
     'parent_models' => 'deleted_at DATETIME',
     'paranoid_models' => 'parent_model_id INTEGER, deleted_at DATETIME',
+    'default_scope_true_models' => 'deleted_at DATETIME',
+    'default_scope_false_models' => 'deleted_at DATETIME',
     'paranoid_model_with_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER',
     'paranoid_model_with_build_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_and_build_id INTEGER, name VARCHAR(32)',
     'paranoid_model_with_anthor_class_name_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER',
@@ -242,6 +244,22 @@ class ParanoiaTest < test_framework
 
     assert_equal model, ParanoidModel.only_deleted.last
     assert_equal false, ParanoidModel.only_deleted.include?(model2)
+  end
+
+  def test_omittance_of_default_scope
+    model = DefaultScopeFalseModel.new
+    model.save
+    model.destroy
+
+    assert_equal true, DefaultScopeFalseModel.all.include?(model)
+  end
+
+  def test_default_scope
+    model = DefaultScopeTrueModel.new
+    model.save
+    model.destroy
+
+    assert_equal false, DefaultScopeTrueModel.all.include?(model)
   end
 
   def test_default_scope_for_has_many_relationships
@@ -916,6 +934,14 @@ end
 
 class CustomSentinelModel < ActiveRecord::Base
   acts_as_paranoid sentinel_value: DateTime.new(0)
+end
+
+class DefaultScopeTrueModel < ActiveRecord::Base
+  acts_as_paranoid default_scope: true
+end
+
+class DefaultScopeFalseModel < ActiveRecord::Base
+  acts_as_paranoid default_scope: false
 end
 
 class NonParanoidModel < ActiveRecord::Base
