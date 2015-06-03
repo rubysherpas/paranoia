@@ -33,6 +33,10 @@ module Paranoia
     end
     alias :deleted :only_deleted
 
+    def without_deleted
+      where(paranoia_column => nil)
+    end
+
     def restore(id_or_ids, opts = {})
       ids = Array(id_or_ids).flatten
       any_object_instead_of_id = ids.any? { |id| ActiveRecord::Base === id }
