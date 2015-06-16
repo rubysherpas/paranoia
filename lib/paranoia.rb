@@ -144,7 +144,7 @@ module Paranoia
       end
 
       if association_data.nil? && association.macro.to_s == "has_one"
-        association_class_name = association.class_name
+        association_class_name = association.klass.name
         association_foreign_key = association.foreign_key
 
         if association.type

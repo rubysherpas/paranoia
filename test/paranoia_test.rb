@@ -34,7 +34,9 @@ def setup!
     'custom_column_models' => 'destroyed_at DATETIME',
     'custom_sentinel_models' => 'deleted_at DATETIME NOT NULL',
     'non_paranoid_models' => 'parent_model_id INTEGER',
-    'polymorphic_models' => 'parent_id INTEGER, parent_type STRING, deleted_at DATETIME'
+    'polymorphic_models' => 'parent_id INTEGER, parent_type STRING, deleted_at DATETIME',
+    'namespaced_paranoid_has_ones' => 'deleted_at DATETIME, paranoid_belongs_tos_id INTEGER',
+    'namespaced_paranoid_belongs_tos' => 'deleted_at DATETIME, paranoid_has_one_id INTEGER',
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -618,6 +620,19 @@ class ParanoiaTest < test_framework
     assert hasOne.reload.deleted_at.nil?
   end
 
+  def test_restore_with_module_scoped_has_one_association
+    # setup and destroy test object
+    hasOne = Namespaced::ParanoidHasOne.create
+    hasOne.destroy
+    assert_equal false, hasOne.reload.deleted_at.nil?
+
+    # Does it raise "uninitialized constant ParanoidBelongsTo"
+    # on restore of ParanoidHasOne?
+    hasOne.restore(:recursive => true)
+
+    assert hasOne.reload.deleted_at.nil?
+  end
+
   # covers #185
   def test_restoring_recursive_has_one_restores_correct_object
     hasOnes = 2.times.map { ParanoidModelWithHasOne.create }
@@ -1000,4 +1015,20 @@ end
 class PolymorphicModel < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :parent, polymorphic: true
+end
+
+module Namespaced
+  def self.table_name_prefix
+    "namespaced_"
+  end
+
+  class ParanoidHasOne < ActiveRecord::Base
+    acts_as_paranoid
+    has_one :paranoid_belongs_to, dependent: :destroy
+  end
+
+  class ParanoidBelongsTo < ActiveRecord::Base
+    acts_as_paranoid
+    belongs_to :paranoid_has_one
+  end
 end
