@@ -68,7 +68,7 @@ module Paranoia
   def destroy
     transaction do
       run_callbacks(:destroy) do
-        result = touch_paranoia_column
+        result = delete
         if result && ActiveRecord::VERSION::STRING >= '4.2'
           each_counter_cached_associations do |association|
             foreign_key = association.reflection.foreign_key.to_sym
@@ -85,7 +85,13 @@ module Paranoia
   end
 
   def delete
-    touch_paranoia_column
+    raise ActiveRecord::ReadOnlyRecord, "#{self.class} is marked as readonly" if readonly?
+    if persisted?
+      touch(paranoia_column)
+    elsif !frozen?
+      write_attribute(paranoia_column, current_time_from_proper_timezone)
+    end
+    self
   end
 
   def restore!(opts = {})
@@ -112,18 +118,6 @@ module Paranoia
   alias :deleted? :paranoia_destroyed?
 
   private
-
-  # touch paranoia column.
-  # insert time to paranoia column.
-  def touch_paranoia_column
-    raise ActiveRecord::ReadOnlyRecord, "#{self.class} is marked as readonly" if readonly?
-    if persisted?
-      touch(paranoia_column)
-    elsif !frozen?
-      write_attribute(paranoia_column, current_time_from_proper_timezone)
-    end
-    self
-  end
 
   # restore associated records that have been soft deleted when
   # we called #destroy
