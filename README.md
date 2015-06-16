@@ -9,7 +9,7 @@ If you wish to actually destroy an object you may call `really_destroy!`. **WARN
 If a record has `has_many` associations defined AND those associations have `dependent: :destroy` set on them, then they will also be soft-deleted if `acts_as_paranoid` is set,  otherwise the normal destroy will be called.
 
 ## Getting Started Video
-Setup and basic usage of the paranoia gem  
+Setup and basic usage of the paranoia gem
 [GoRails #41](https://gorails.com/episodes/soft-delete-with-paranoia)
 
 ## Installation & Usage
@@ -184,6 +184,49 @@ add_index :clients, [:group_id, :other_id], where: "deleted_at IS NULL"
 ```
 
 Of course, this is not necessary for the indexes you always use in association with `with_deleted` or `only_deleted`.
+
+##### Unique Indexes
+
+Becuse NULL != NULL in standard SQL, we can not simply create a unique index
+on the deleted_at column and expect it to enforce that there only be one record
+with a certain combination of values.
+
+If your database supports them, good alternatives include partial indexes
+(above) and indexes on computed columns. E.g.
+
+``` ruby
+add_index :clients, [:group_id, 'COALESCE(deleted_at, false)'], unique: true
+```
+
+If not, an alternative is to create a separate column which is maintained
+alongside deleted_at for the sake of enforcing uniqueness. To that end,
+paranoia makes use of two method to make its destroy and restore actions:
+paranoia_restore_attributes and paranoia_destroy_attributes.
+
+``` ruby
+add_column :clients, :active, :boolean
+add_index :clients, [:group_id, :active], unique: true
+
+class Client < ActiveRecord::Base
+  # optionally have paranoia make use of your unique column, so that
+  # your lookups will benefit from the unique index
+  acts_as_paranoid column: :active, sentinel_value: true
+
+  def paranoia_restore_attributes
+    {
+      deleted_at: nil,
+      active: true
+    }
+  end
+
+  def paranoia_destroy_attributes
+    {
+      deleted_at: current_time_from_proper_timezone,
+      active: nil
+    }
+  end
+end
+```
 
 ## Acts As Paranoid Migration
 

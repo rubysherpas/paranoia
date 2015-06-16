@@ -29,7 +29,16 @@ module Paranoia
     end
 
     def only_deleted
-      with_deleted.where.not(paranoia_column => paranoia_sentinel_value)
+      if paranoia_sentinel_value.nil?
+        with_deleted.where.not(paranoia_column => paranoia_sentinel_value)
+      else
+        # if paranoia_sentinel_value is not null, then it is possible that
+        # some deleted rows will hold a null value in the paranoia column
+        # these will not match != sentinel value because "NULL != value" is
+        # NULL under the sql standard
+        quoted_paranoia_column = connection.quote_column_name(paranoia_column)
+        with_deleted.where("#{quoted_paranoia_column} IS NULL OR #{quoted_paranoia_column} != ?", paranoia_sentinel_value)
+      end
     end
     alias :deleted :only_deleted
 
@@ -87,9 +96,12 @@ module Paranoia
   def delete
     raise ActiveRecord::ReadOnlyRecord, "#{self.class} is marked as readonly" if readonly?
     if persisted?
-      touch(paranoia_column)
+      # if a transaction exists, add the record so that after_commit
+      # callbacks can be run
+      add_to_transaction
+      update_columns(paranoia_destroy_attributes)
     elsif !frozen?
-      write_attribute(paranoia_column, current_time_from_proper_timezone)
+      assign_attributes(paranoia_destroy_attributes)
     end
     self
   end
@@ -102,7 +114,7 @@ module Paranoia
         noop_if_frozen = ActiveRecord.version < Gem::Version.new("4.1")
         if (noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen
           write_attribute paranoia_column, paranoia_sentinel_value
-          update_column paranoia_column, paranoia_sentinel_value
+          update_columns(paranoia_restore_attributes)
         end
         restore_associated_records if opts[:recursive]
       end
@@ -118,6 +130,18 @@ module Paranoia
   alias :deleted? :paranoia_destroyed?
 
   private
+
+  def paranoia_restore_attributes
+    {
+      paranoia_column => paranoia_sentinel_value
+    }
+  end
+
+  def paranoia_destroy_attributes
+    {
+      paranoia_column => current_time_from_proper_timezone
+    }
+  end
 
   # restore associated records that have been soft deleted when
   # we called #destroy
