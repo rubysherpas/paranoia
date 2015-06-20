@@ -16,7 +16,7 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE plain_models (id INTEGER NOT
 ActiveRecord::Base.connection.execute 'CREATE TABLE callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE fail_callback_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE related_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER NOT NULL, deleted_at DATETIME)'
-ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE employers (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(10))'
 ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
@@ -434,6 +434,13 @@ class ParanoiaTest < Test::Unit::TestCase
     a.restore!
     # essentially, we're just ensuring that this doesn't crash
   end
+  
+  def test_validates_uniqueness_only_checks_non_deleted_records
+    a = Employer.create!(name: "A")
+    a.destroy
+    b = Employer.new(name: "A")
+    assert b.valid?
+  end
 
   private
   def get_featureful_model
@@ -498,6 +505,7 @@ end
 
 class Employer < ActiveRecord::Base
   acts_as_paranoid
+  validates_uniqueness_of :name
   has_many :jobs
   has_many :employees, :through => :jobs
 end
