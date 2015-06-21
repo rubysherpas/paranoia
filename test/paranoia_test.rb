@@ -415,7 +415,7 @@ class ParanoiaTest < Test::Unit::TestCase
 
     # Does it raise NoMethodException on restore of nil
     hasOne.restore(:recursive => true)
-    
+
     assert hasOne.reload.deleted_at.nil?
   end
 
@@ -434,12 +434,18 @@ class ParanoiaTest < Test::Unit::TestCase
     a.restore!
     # essentially, we're just ensuring that this doesn't crash
   end
-  
+
   def test_validates_uniqueness_only_checks_non_deleted_records
     a = Employer.create!(name: "A")
     a.destroy
     b = Employer.new(name: "A")
     assert b.valid?
+  end
+
+  def test_validates_uniqueness_still_works_on_non_deleted_records
+    a = Employer.create!(name: "A")
+    b = Employer.new(name: "A")
+    refute b.valid?
   end
 
   private
