@@ -8,7 +8,7 @@ FileUtils.mkdir_p File.dirname(DB_FILE)
 FileUtils.rm_f DB_FILE
 
 ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => DB_FILE
-ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE parent_models (id INTEGER NOT NULL PRIMARY KEY, type VARCHAR(50), deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE paranoid_model_with_belongs (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE featureful_models (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME, name VARCHAR(32))'
@@ -79,6 +79,28 @@ class ParanoiaTest < Test::Unit::TestCase
     assert model.instance_variable_get(:@after_commit_callback_called)
   end
 
+  def test_failing_destroy_on_parent_model_does_not_destroy_very_related_model
+    model = FailDestroyParentModel.new
+    very_related_model = RelatedModel.new
+    model.very_related_models << very_related_model
+    model.save
+    model.destroy
+    assert !model.destroyed?
+    assert !very_related_model.destroyed?
+  end
+  
+  def test_join_applies_paranoid_behavior_to_both_models
+    ParentModel.unscoped.delete_all
+    assert_equal 0, ParentModel.count 
+    model = ParentModel.create
+    model.related_models.create
+    model.related_models.create
+    first_related_model_id = model.related_models.first.id
+    
+    assert_equal 1, ParentModel.joins(:related_models).where(related_models: {id: first_related_model_id}).count
+    model.related_models.first.destroy
+    assert_equal 0, ParentModel.joins(:related_models).where(related_models: {id: first_related_model_id}).count
+  end
 
   def test_delete_behavior_for_plain_models_callbacks
     model = CallbackModel.new
@@ -507,6 +529,11 @@ end
 class RelatedModel < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :parent_model
+end
+
+class FailDestroyParentModel < ParentModel
+  acts_as_paranoid
+  before_destroy { |_| false }
 end
 
 class Employer < ActiveRecord::Base
