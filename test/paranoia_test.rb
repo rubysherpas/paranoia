@@ -37,6 +37,7 @@ def setup!
     'polymorphic_models' => 'parent_id INTEGER, parent_type STRING, deleted_at DATETIME',
     'namespaced_paranoid_has_ones' => 'deleted_at DATETIME, paranoid_belongs_tos_id INTEGER',
     'namespaced_paranoid_belongs_tos' => 'deleted_at DATETIME, paranoid_has_one_id INTEGER',
+    'unparanoid_unique_models' => 'name VARCHAR(32), paranoid_with_unparanoids_id INTEGER'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -821,6 +822,13 @@ class ParanoiaTest < test_framework
     # assert related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
   end
 
+  def test_uniqueness_for_unparanoid_associated
+    parent_model = ParanoidWithUnparanoids.create
+    related = parent_model.unparanoid_unique_models.create
+    # will raise exception if model is not checked for paranoia
+    related.valid?
+  end
+
   # TODO: find a fix for Rails 4.1
   if ActiveRecord::VERSION::STRING !~ /\A4\.1/
     def test_counter_cache_column_update_on_really_destroy
@@ -862,6 +870,16 @@ class ParanoidModel < ActiveRecord::Base
   acts_as_paranoid
 end
 
+class ParanoidWithUnparanoids < ActiveRecord::Base
+  self.table_name = 'plain_models'
+  has_many :unparanoid_unique_models
+end
+
+class UnparanoidUniqueModel < ActiveRecord::Base
+  belongs_to :paranoid_with_unparanoids
+  validates :name, :uniqueness => true
+end
+
 class FailCallbackModel < ActiveRecord::Base
   belongs_to :parent_model
   acts_as_paranoid
@@ -871,6 +889,10 @@ end
 
 class FeaturefulModel < ActiveRecord::Base
   acts_as_paranoid
+  validates :name, :presence => true, :uniqueness => true
+end
+
+class NonParanoidChildModel < ActiveRecord::Base
   validates :name, :presence => true, :uniqueness => true
 end
 
