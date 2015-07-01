@@ -94,22 +94,6 @@ If you really want it gone *gone*, call `really_destroy!`:
 # => client
 ```
 
-If you want a method to be called on destroy, simply provide a `before_destroy` callback:
-
-``` ruby
-class Client < ActiveRecord::Base
-  acts_as_paranoid
-
-  before_destroy :some_method
-
-  def some_method
-    # do stuff
-  end
-
-  # ...
-end
-```
-
 If you want to use a column other than `deleted_at`, you can pass it as an option:
 
 ``` ruby
@@ -180,12 +164,6 @@ Client.restore(id, :recursive => true)
 client.restore(:recursive => true)
 ```
 
-If you want callbacks to trigger before a restore:
-
-``` ruby
-before_restore :callback_name_goes_here
-```
-
 For more information, please look at the tests.
 
 #### About indexes:
@@ -220,6 +198,24 @@ You can replace the older `acts_as_paranoid` methods as follows:
 
 The `recover` method in `acts_as_paranoid` runs `update` callbacks.  Paranoia's
 `restore` method does not do this.
+
+## Callbacks
+
+Paranoia provides few callbacks. It triggers `destroy` callback when the record is marked as deleted and `real_destroy` when the record is completely removed from database. It also calls `restore` callback when record is restored via paranoia
+
+For example if you want to index you records in some search engine you can do like this:
+
+```ruby
+class Product < ActiveRecord::Base
+  acts_as_paranoid
+
+  after_destroy      :update_document_in_search_engine
+  after_restore      :update_document_in_search_engine
+  after_real_destroy :remove_document_from_search_engine
+end
+```
+
+You can use these events just like regular Rails callbacks with before, after and around hooks.
 
 ## License
 

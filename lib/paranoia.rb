@@ -47,18 +47,20 @@ module Paranoia
 
   module Callbacks
     def self.extended(klazz)
-      klazz.define_callbacks :restore
+      [:restore, :real_destroy].each do |callback_name|
+        klazz.define_callbacks callback_name
 
-      klazz.define_singleton_method("before_restore") do |*args, &block|
-        set_callback(:restore, :before, *args, &block)
-      end
+        klazz.define_singleton_method("before_#{callback_name}") do |*args, &block|
+          set_callback(callback_name, :before, *args, &block)
+        end
 
-      klazz.define_singleton_method("around_restore") do |*args, &block|
-        set_callback(:restore, :around, *args, &block)
-      end
+        klazz.define_singleton_method("around_#{callback_name}") do |*args, &block|
+          set_callback(callback_name, :around, *args, &block)
+        end
 
-      klazz.define_singleton_method("after_restore") do |*args, &block|
-        set_callback(:restore, :after, *args, &block)
+        klazz.define_singleton_method("after_#{callback_name}") do |*args, &block|
+          set_callback(callback_name, :after, *args, &block)
+        end
       end
     end
   end
@@ -172,25 +174,29 @@ class ActiveRecord::Base
 
     alias :destroy_without_paranoia :destroy
     def really_destroy!
-      dependent_reflections = self.class.reflections.select do |name, reflection|
-        reflection.options[:dependent] == :destroy
-      end
-      if dependent_reflections.any?
-        dependent_reflections.each do |name, reflection|
-          association_data = self.send(name)
-          # has_one association can return nil
-          # .paranoid? will work for both instances and classes
-          if association_data && association_data.paranoid?
-            if reflection.collection?
-              association_data.with_deleted.each(&:really_destroy!)
-            else
-              association_data.really_destroy!
+      transaction do
+        run_callbacks(:real_destroy) do
+          dependent_reflections = self.class.reflections.select do |name, reflection|
+            reflection.options[:dependent] == :destroy
+          end
+          if dependent_reflections.any?
+            dependent_reflections.each do |name, reflection|
+              association_data = self.send(name)
+              # has_one association can return nil
+              # .paranoid? will work for both instances and classes
+              if association_data && association_data.paranoid?
+                if reflection.collection?
+                  association_data.with_deleted.each(&:really_destroy!)
+                else
+                  association_data.really_destroy!
+                end
+              end
             end
           end
+          write_attribute(paranoia_column, current_time_from_proper_timezone)
+          destroy_without_paranoia
         end
       end
-      write_attribute(paranoia_column, current_time_from_proper_timezone)
-      destroy_without_paranoia
     end
 
     include Paranoia
