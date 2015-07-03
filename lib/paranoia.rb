@@ -33,6 +33,10 @@ module Paranoia
     end
     alias :deleted :only_deleted
 
+    def without_deleted
+      where(paranoia_column => nil)
+    end
+
     def restore(id_or_ids, opts = {})
       ids = Array(id_or_ids).flatten
       any_object_instead_of_id = ids.any? { |id| ActiveRecord::Base === id }
@@ -207,7 +211,7 @@ class ActiveRecord::Base
     def self.paranoia_scope
       where(paranoia_column => paranoia_sentinel_value)
     end
-    default_scope { paranoia_scope }
+    default_scope { paranoia_scope } unless options[:default_scope] == false
 
     before_restore {
       self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
