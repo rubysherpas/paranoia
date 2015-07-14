@@ -37,7 +37,8 @@ def setup!
     'polymorphic_models' => 'parent_id INTEGER, parent_type STRING, deleted_at DATETIME',
     'namespaced_paranoid_has_ones' => 'deleted_at DATETIME, paranoid_belongs_tos_id INTEGER',
     'namespaced_paranoid_belongs_tos' => 'deleted_at DATETIME, paranoid_has_one_id INTEGER',
-    'unparanoid_unique_models' => 'name VARCHAR(32), paranoid_with_unparanoids_id INTEGER'
+    'unparanoid_unique_models' => 'name VARCHAR(32), paranoid_with_unparanoids_id INTEGER',
+    'active_column_models' => 'deleted_at DATETIME, active BOOLEAN'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -126,6 +127,22 @@ class ParanoiaTest < test_framework
     assert_equal nil, model.instance_variable_get(:@validate_called)
     assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
     assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
+    assert_equal nil, model.instance_variable_get(:@after_commit_callback_called)
+  end
+
+  def test_delete_in_transaction_behavior_for_plain_models_callbacks
+    model = CallbackModel.new
+    model.save
+    model.remove_called_variables     # clear called callback flags
+    CallbackModel.transaction do
+      model.delete
+    end
+
+    assert_equal nil, model.instance_variable_get(:@update_callback_called)
+    assert_equal nil, model.instance_variable_get(:@save_callback_called)
+    assert_equal nil, model.instance_variable_get(:@validate_called)
+    assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
+    assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
     assert model.instance_variable_get(:@after_commit_callback_called)
   end
 
@@ -183,6 +200,25 @@ class ParanoiaTest < test_framework
 
   def test_default_sentinel_value
     assert_equal nil, ParanoidModel.paranoia_sentinel_value
+  end
+
+  def test_active_column_model
+    model = ActiveColumnModel.new
+    assert_equal 0, model.class.count
+    model.save!
+    assert_nil model.deleted_at
+    assert_equal true, model.active
+    assert_equal 1, model.class.count
+    model.destroy
+
+    assert_equal false, model.deleted_at.nil?
+    assert_nil model.active
+    assert model.paranoia_destroyed?
+
+    assert_equal 0, model.class.count
+    assert_equal 1, model.class.unscoped.count
+    assert_equal 1, model.class.only_deleted.count
+    assert_equal 1, model.class.deleted.count
   end
 
   def test_sentinel_value_for_custom_sentinel_models
@@ -976,6 +1012,24 @@ end
 
 class CustomSentinelModel < ActiveRecord::Base
   acts_as_paranoid sentinel_value: DateTime.new(0)
+end
+
+class ActiveColumnModel < ActiveRecord::Base
+  acts_as_paranoid column: :active, sentinel_value: true
+
+  def paranoia_restore_attributes
+    {
+      deleted_at: nil,
+      active: true
+    }
+  end
+
+  def paranoia_destroy_attributes
+    {
+      deleted_at: current_time_from_proper_timezone,
+      active: nil
+    }
+  end
 end
 
 class NonParanoidModel < ActiveRecord::Base
