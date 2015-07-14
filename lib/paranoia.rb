@@ -2,6 +2,7 @@ require 'active_record' unless defined? ActiveRecord
 
 module Paranoia
   @@default_sentinel_value = nil
+  @play_blind = false
 
   # Change default_sentinel_value in a rails initilizer
   def self.default_sentinel_value=(val)
@@ -89,6 +90,7 @@ module Paranoia
   end
 
   def restore!(opts = {})
+    @play_blind = true
     self.class.transaction do
       run_callbacks(:restore) do
         # Fixes a bug where the build would error because attributes were frozen.
@@ -106,11 +108,13 @@ module Paranoia
   end
   alias :restore :restore!
 
-  def paranoia_destroyed?
-    send(paranoia_column) != paranoia_sentinel_value
+  def destroyed?
+    value = (send(paranoia_column) != paranoia_sentinel_value) && !@play_blind
+    @play_blind = false
+    value
   end
-  alias :deleted? :paranoia_destroyed?
-
+  alias :deleted? :destroyed?
+   
   private
 
   # touch paranoia column.
