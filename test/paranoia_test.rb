@@ -173,7 +173,7 @@ class ParanoiaTest < test_framework
     model.destroy
 
     assert_equal false, model.destroyed_at.nil?
-    assert model.paranoia_destroyed?
+    assert model.destroyed?
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
@@ -194,7 +194,7 @@ class ParanoiaTest < test_framework
     model.destroy
 
     assert DateTime.new(0) != model.deleted_at
-    assert model.paranoia_destroyed?
+    assert model.destroyed?
 
     assert_equal 0, model.class.count
     assert_equal 1, model.class.unscoped.count
@@ -322,10 +322,10 @@ class ParanoiaTest < test_framework
     model = ParanoidModel.create!
     model.really_destroy!
     assert model.really_destroyed?
-    assert model.paranoia_destroyed?
+    assert model.destroyed?
     model.destroy
     assert model.really_destroyed?
-    assert model.paranoia_destroyed?
+    assert model.destroyed?
   end
 
   def test_destroy_on_unsaved_record
@@ -339,9 +339,9 @@ class ParanoiaTest < test_framework
     # Mirrors behaviour above
     model = ParanoidModel.new
     model.destroy!
-    assert model.paranoia_destroyed?
+    assert model.destroyed?
     model.destroy!
-    assert model.paranoia_destroyed?
+    assert model.destroyed?
   end
 
   def test_restore
@@ -350,13 +350,13 @@ class ParanoiaTest < test_framework
     id = model.id
     model.destroy
 
-    assert model.paranoia_destroyed?
+    assert model.destroyed?
 
     model = ParanoidModel.only_deleted.find(id)
     model.restore!
     model.reload
 
-    assert_equal false, model.paranoia_destroyed?
+    assert_equal false, model.destroyed?
   end
 
   def test_restore_on_object_return_self
@@ -406,7 +406,7 @@ class ParanoiaTest < test_framework
     id = model.id
     model.destroy
 
-    assert model.paranoia_destroyed?
+    assert model.destroyed?
 
     model = CallbackModel.only_deleted.find(id)
     model.restore!
@@ -492,9 +492,9 @@ class ParanoiaTest < test_framework
     b.reload
     c.reload
 
-    refute a.paranoia_destroyed?
-    assert b.paranoia_destroyed?
-    refute c.paranoia_destroyed?
+    refute a.destroyed?
+    assert b.destroyed?
+    refute c.destroyed?
   end
 
   def test_restore_with_associations
