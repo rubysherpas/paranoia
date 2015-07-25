@@ -21,6 +21,7 @@ ActiveRecord::Base.connection.execute 'CREATE TABLE employees (id INTEGER NOT NU
 ActiveRecord::Base.connection.execute 'CREATE TABLE jobs (id INTEGER NOT NULL PRIMARY KEY, employer_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, deleted_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE custom_column_models (id INTEGER NOT NULL PRIMARY KEY, destroyed_at DATETIME)'
 ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_models (id INTEGER NOT NULL PRIMARY KEY, parent_model_id INTEGER)'
+ActiveRecord::Base.connection.execute 'CREATE TABLE non_paranoid_unique_models (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(10))'
 
 class ParanoiaTest < Test::Unit::TestCase
   def test_plain_model_class_is_not_paranoid
@@ -448,6 +449,12 @@ class ParanoiaTest < Test::Unit::TestCase
     refute b.valid?
   end
 
+  def test_validates_uniqueness_still_works_on_non_paranoid_models
+    a = NonParanoidUniqueModel.create!(name: "A")
+    b = NonParanoidUniqueModel.new(name: "A")
+    refute b.valid?
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => 'not empty')
@@ -533,6 +540,10 @@ class CustomColumnModel < ActiveRecord::Base
 end
 
 class NonParanoidModel < ActiveRecord::Base
+end
+
+class NonParanoidUniqueModel < ActiveRecord::Base
+  validates :name, :uniqueness => true
 end
 
 class ParanoidModelWithObservers < ParanoidModel
