@@ -38,7 +38,8 @@ def setup!
     'namespaced_paranoid_has_ones' => 'deleted_at DATETIME, paranoid_belongs_tos_id INTEGER',
     'namespaced_paranoid_belongs_tos' => 'deleted_at DATETIME, paranoid_has_one_id INTEGER',
     'unparanoid_unique_models' => 'name VARCHAR(32), paranoid_with_unparanoids_id INTEGER',
-    'active_column_models' => 'deleted_at DATETIME, active BOOLEAN'
+    'active_column_models' => 'deleted_at DATETIME, active BOOLEAN',
+    'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -219,6 +220,19 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.unscoped.count
     assert_equal 1, model.class.only_deleted.count
     assert_equal 1, model.class.deleted.count
+  end
+
+  def test_active_column_model_with_uniqueness_validation_only_checks_non_deleted_records
+    a = ActiveColumnModelWithUniquenessValidation.create!(name: "A")
+    a.destroy
+    b = ActiveColumnModelWithUniquenessValidation.new(name: "A")
+    assert b.valid?
+  end
+
+  def test_active_column_model_with_uniqueness_validation_still_works_on_non_deleted_records
+    a = ActiveColumnModelWithUniquenessValidation.create!(name: "A")
+    b = ActiveColumnModelWithUniquenessValidation.new(name: "A")
+    refute b.valid?
   end
 
   def test_sentinel_value_for_custom_sentinel_models
@@ -1015,6 +1029,25 @@ class CustomSentinelModel < ActiveRecord::Base
 end
 
 class ActiveColumnModel < ActiveRecord::Base
+  acts_as_paranoid column: :active, sentinel_value: true
+
+  def paranoia_restore_attributes
+    {
+      deleted_at: nil,
+      active: true
+    }
+  end
+
+  def paranoia_destroy_attributes
+    {
+      deleted_at: current_time_from_proper_timezone,
+      active: nil
+    }
+  end
+end
+
+class ActiveColumnModelWithUniquenessValidation < ActiveRecord::Base
+  validates :name, :uniqueness => true
   acts_as_paranoid column: :active, sentinel_value: true
 
   def paranoia_restore_attributes

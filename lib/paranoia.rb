@@ -269,7 +269,7 @@ module ActiveRecord
       def build_relation_with_paranoia(klass, table, attribute, value)
         relation = build_relation_without_paranoia(klass, table, attribute, value)
         if klass.respond_to?(:paranoia_column)
-          relation.and(klass.arel_table[klass.paranoia_column].eq(nil))
+          relation.and(klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value))
         else
           relation
         end
