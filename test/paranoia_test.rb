@@ -757,17 +757,6 @@ class ParanoiaTest < test_framework
     refute b.valid?
   end
 
-  def test_i_am_the_destroyer
-    expected = %Q{
-      Sharon: "There should be a method called I_AM_THE_DESTROYER!"
-      Ryan:   "What should this method do?"
-      Sharon: "It should fix all the spelling errors on the page!"
-}
-    assert_output expected do
-      ParanoidModel.I_AM_THE_DESTROYER!
-    end
-  end
-
   def test_destroy_fails_if_callback_raises_exception
     parent = AsplodeModel.create
 
