@@ -22,23 +22,21 @@ module Paranoia
 
     def with_deleted
       if ActiveRecord::VERSION::STRING >= "4.1"
-        unscope where: paranoia_column
-      else
-        all.tap { |x| x.default_scoped = false }
+        return unscope where: paranoia_column
       end
+      all.tap { |x| x.default_scoped = false }
     end
 
     def only_deleted
       if paranoia_sentinel_value.nil?
-        with_deleted.where.not(paranoia_column => paranoia_sentinel_value)
-      else
-        # if paranoia_sentinel_value is not null, then it is possible that
-        # some deleted rows will hold a null value in the paranoia column
-        # these will not match != sentinel value because "NULL != value" is
-        # NULL under the sql standard
-        quoted_paranoia_column = connection.quote_column_name(paranoia_column)
-        with_deleted.where("#{quoted_paranoia_column} IS NULL OR #{quoted_paranoia_column} != ?", paranoia_sentinel_value)
+        return with_deleted.where.not(paranoia_column => paranoia_sentinel_value)
       end
+      # if paranoia_sentinel_value is not null, then it is possible that
+      # some deleted rows will hold a null value in the paranoia column
+      # these will not match != sentinel value because "NULL != value" is
+      # NULL under the sql standard
+      quoted_paranoia_column = connection.quote_column_name(paranoia_column)
+      with_deleted.where("#{quoted_paranoia_column} IS NULL OR #{quoted_paranoia_column} != ?", paranoia_sentinel_value)
     end
     alias :deleted :only_deleted
 
@@ -78,15 +76,12 @@ module Paranoia
     transaction do
       run_callbacks(:destroy) do
         result = delete
-        if result && ActiveRecord::VERSION::STRING >= '4.2'
-          each_counter_cached_associations do |association|
-            foreign_key = association.reflection.foreign_key.to_sym
-            unless destroyed_by_association && destroyed_by_association.foreign_key.to_sym == foreign_key
-              if send(association.reflection.name)
-                association.decrement_counters
-              end
-            end
-          end
+        next result unless result && ActiveRecord::VERSION::STRING >= '4.2'
+        each_counter_cached_associations do |association|
+          foreign_key = association.reflection.foreign_key.to_sym
+          next if destroyed_by_association && destroyed_by_association.foreign_key.to_sym == foreign_key
+          next unless send(association.reflection.name)
+          association.decrement_counters
         end
         result
       end
@@ -202,13 +197,11 @@ class ActiveRecord::Base
               association_data = self.send(name)
               # has_one association can return nil
               # .paranoid? will work for both instances and classes
-              if association_data && association_data.paranoid?
-                if reflection.collection?
-                  association_data.with_deleted.each(&:really_destroy!)
-                else
-                  association_data.really_destroy!
-                end
+              next unless association_data && association_data.paranoid?
+              if reflection.collection?
+                next association_data.with_deleted.each(&:really_destroy!)
               end
+              association_data.really_destroy!
             end
           end
           write_attribute(paranoia_column, current_time_from_proper_timezone)
@@ -268,11 +261,8 @@ module ActiveRecord
       protected
       def build_relation_with_paranoia(klass, table, attribute, value)
         relation = build_relation_without_paranoia(klass, table, attribute, value)
-        if klass.respond_to?(:paranoia_column)
-          relation.and(klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value))
-        else
-          relation
-        end
+        return relation unless klass.respond_to?(:paranoia_column)
+        relation.and(klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value))
       end
       alias_method_chain :build_relation, :paranoia
     end
