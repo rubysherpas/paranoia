@@ -249,6 +249,10 @@ class ActiveRecord::Base
   def self.paranoid? ; false ; end
   def paranoid? ; self.class.paranoid? ; end
 
+  def self.delete_all(conditions=nil)
+    super and return unless paranoid?
+    where(conditions).update_all(self.new.send :paranoia_destroy_attributes)
+  end
   private
 
   def paranoia_column
