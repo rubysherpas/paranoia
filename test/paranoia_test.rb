@@ -765,7 +765,7 @@ class ParanoiaTest < test_framework
     pt1.update_columns(created_at: 20.years.ago, updated_at: 10.years.ago, deleted_at: 10.years.ago) 
     ParanoidModelWithTimestamp.record_timestamps = true
     assert pt1.updated_at < 10.minutes.ago
-    assert !pt1.deleted_at.nil?
+    refute pt1.deleted_at.nil?
     pt1.restore!
     assert pt1.deleted_at.nil?
     assert pt1.updated_at > 10.minutes.ago
