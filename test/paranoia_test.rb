@@ -20,6 +20,7 @@ def setup!
     'paranoid_model_with_build_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_and_build_id INTEGER, name VARCHAR(32)',
     'paranoid_model_with_anthor_class_name_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER',
     'paranoid_model_with_foreign_key_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, has_one_foreign_key_id INTEGER',
+    'paranoid_model_with_timestamps' => 'parent_model_id INTEGER, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME',
     'not_paranoid_model_with_belongs' => 'parent_model_id INTEGER, paranoid_model_with_has_one_id INTEGER',
     'paranoid_model_with_has_one_and_builds' => 'parent_model_id INTEGER, color VARCHAR(32), deleted_at DATETIME, has_one_foreign_key_id INTEGER',
     'featureful_models' => 'deleted_at DATETIME, name VARCHAR(32)',
@@ -757,6 +758,19 @@ class ParanoiaTest < test_framework
     refute b.valid?
   end
 
+  def test_updated_at_modification_on_restore
+    parent1 = ParentModel.create
+    pt1 = ParanoidModelWithTimestamp.create(:parent_model => parent1)
+    ParanoidModelWithTimestamp.record_timestamps = false
+    pt1.update_columns(created_at: 20.years.ago, updated_at: 10.years.ago, deleted_at: 10.years.ago) 
+    ParanoidModelWithTimestamp.record_timestamps = true
+    assert pt1.updated_at < 10.minutes.ago
+    refute pt1.deleted_at.nil?
+    pt1.restore!
+    assert pt1.deleted_at.nil?
+    assert pt1.updated_at > 10.minutes.ago
+  end
+
   def test_i_am_the_destroyer
     expected = %Q{
       Sharon: "There should be a method called I_AM_THE_DESTROYER!"
@@ -1120,6 +1134,11 @@ end
 class ParanoidModelWithForeignKeyBelong < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :paranoid_model_with_has_one
+end
+
+class ParanoidModelWithTimestamp < ActiveRecord::Base
+  belongs_to :parent_model
+  acts_as_paranoid
 end
 
 class NotParanoidModelWithBelong < ActiveRecord::Base

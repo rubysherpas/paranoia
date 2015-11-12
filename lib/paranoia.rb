@@ -110,6 +110,7 @@ module Paranoia
         if (noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen
           write_attribute paranoia_column, paranoia_sentinel_value
           update_columns(paranoia_restore_attributes)
+          touch
         end
         restore_associated_records if opts[:recursive]
       end
