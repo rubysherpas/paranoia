@@ -298,9 +298,16 @@ class ParanoiaTest < Test::Unit::TestCase
     assert model.really_destroyed?
   end
 
-  def test_real_destroy_dependent_destroy
+  def test_real_destroy_dependent_destroy_for_has_many
     parent = ParentModel.create
     child = parent.very_related_models.create
+    parent.really_destroy!
+    refute RelatedModel.unscoped.exists?(child.id)
+  end
+
+  def test_real_destroy_dependent_destroy_for_has_one
+    parent = ParentModel.create
+    child = parent.create_very_related_model
     parent.really_destroy!
     refute RelatedModel.unscoped.exists?(child.id)
   end
@@ -501,6 +508,7 @@ class ParentModel < ActiveRecord::Base
   acts_as_paranoid
   has_many :related_models
   has_many :very_related_models, :class_name => 'RelatedModel', dependent: :destroy
+  has_one :very_related_model, :class_name => 'RelatedModel', dependent: :destroy
   has_many :non_paranoid_models, dependent: :destroy
 end
 
