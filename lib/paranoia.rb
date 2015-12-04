@@ -256,18 +256,18 @@ end
 
 require 'paranoia/rspec' if defined? RSpec
 
-module ActiveRecord
-  module Validations
-    module UniquenessParanoiaValidator
-      def build_relation(klass, table, attribute, value)
-        relation = super(klass, table, attribute, value)
-        return relation unless klass.respond_to?(:paranoia_column)
-        relation.and(klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value))
-      end
-    end
-
-    class UniquenessValidator < ActiveModel::EachValidator
-      prepend UniquenessParanoiaValidator
-    end
-  end
-end
+# module ActiveRecord
+#   module Validations
+#     module UniquenessParanoiaValidator
+#       def build_relation(klass, table, attribute, value)
+#         relation = super(klass, table, attribute, value)
+#         return relation unless klass.respond_to?(:paranoia_column)
+#         relation.and(klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value))
+#       end
+#     end
+#
+#     class UniquenessValidator < ActiveModel::EachValidator
+#       prepend UniquenessParanoiaValidator
+#     end
+#   end
+# end
