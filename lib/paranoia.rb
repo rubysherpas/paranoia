@@ -174,16 +174,3 @@ end
 
 
 require 'paranoia/rspec' if defined? RSpec
-
-module ActiveRecord
-  module Validations
-    class UniquenessValidator < ActiveModel::EachValidator
-      protected
-      def build_relation_with_paranoia(klass, table, attribute, value)
-        relation = build_relation_without_paranoia(klass, table, attribute, value)
-        relation.and(klass.arel_table[klass.paranoia_column].eq(nil))
-      end
-      alias_method_chain :build_relation, :paranoia
-    end
-  end
-end
