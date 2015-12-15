@@ -2,6 +2,7 @@ require 'bundler/setup'
 require 'active_record'
 require 'minitest/autorun'
 require 'paranoia'
+require 'arel-helpers'
 
 test_framework = defined?(MiniTest::Test) ? MiniTest::Test : MiniTest::Unit::TestCase
 ActiveRecord::Base.raise_in_transactional_callbacks = true if ActiveRecord::VERSION::STRING >= '4.2'
@@ -337,6 +338,17 @@ class ParanoiaTest < test_framework
     assert_equal 0, parent.related_models.count
     assert_equal 1, parent.related_models.unscoped.count
   end
+
+  def test_scoping_behavior_for_paranoid_models_arel
+    parent1 = ParentModel.create!
+    parent2 = ParentModel.create!
+    ParanoidArelModel.create!(:parent_model => parent1)
+    ParanoidArelModel.create!(:parent_model => parent2)
+
+    # to_sql: "SELECT "paranoid_models".* FROM "paranoid_models" LEFT OUTER JOIN "parent_models" ON "parent_models"."id" = "paranoid_models"."parent_model_id" AND "parent_models"."deleted_at" = '0000-01-01 00:00:00.000000' WHERE "paranoid_models"."deleted_at" = "
+    assert_equal 2,ParanoidArelModel.all.joins(ParanoidArelModel.join_association(:parent_model, Arel::Nodes::OuterJoin)).to_a.count
+  end
+
 
   def test_default_scope_for_has_many_through_relationships
     employer = Employer.create
@@ -1016,6 +1028,16 @@ end
 class ParanoidModel < ActiveRecord::Base
   belongs_to :parent_model
   acts_as_paranoid
+end
+
+class ParanoidArelModel < ActiveRecord::Base
+  belongs_to :parent_model
+  self.table_name = 'paranoid_models'
+
+  acts_as_paranoid sentinel_value: DateTime.new(0)
+
+  include ArelHelpers::ArelTable
+  include ArelHelpers::JoinAssociation
 end
 
 class ParanoidWithUnparanoids < ActiveRecord::Base
