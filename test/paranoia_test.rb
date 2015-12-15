@@ -5,6 +5,7 @@ require 'paranoia'
 
 test_framework = defined?(MiniTest::Test) ? MiniTest::Test : MiniTest::Unit::TestCase
 ActiveRecord::Base.raise_in_transactional_callbacks = true if ActiveRecord::VERSION::STRING >= '4.2'
+Paranoia.default_sentinel_value = Time.at(0)
 
 def connect!
   ActiveRecord::Base.establish_connection :adapter => 'sqlite3', database: ':memory:'
@@ -111,7 +112,7 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.count
     model.destroy
 
-    assert_equal true, model.deleted_at.nil?
+    assert_equal nil, model.deleted_at
 
     assert_equal 0, model.class.count
     assert_equal 0, model.class.unscoped.count
@@ -205,7 +206,7 @@ class ParanoiaTest < test_framework
     model = CustomColumnModel.new
     assert_equal 0, model.class.count
     model.save!
-    assert_nil model.destroyed_at
+    assert_equal ParanoidModel.paranoia_sentinel_value, model.destroyed_at
     assert_equal 1, model.class.count
     model.destroy
 
@@ -219,7 +220,7 @@ class ParanoiaTest < test_framework
   end
 
   def test_default_sentinel_value
-    assert_equal nil, ParanoidModel.paranoia_sentinel_value
+    assert_equal Time.at(0), ParanoidModel.paranoia_sentinel_value
   end
 
   def test_without_default_scope_option
@@ -584,20 +585,20 @@ class ParanoiaTest < test_framework
     assert_equal true, second_child.destroyed?
 
     parent.restore!
-    assert_equal true, parent.deleted_at.nil?
+    assert_equal Paranoia.default_sentinel_value, parent.deleted_at
     assert_equal false, first_child.reload.deleted_at.nil?
     assert_equal true, second_child.destroyed?
 
     parent.destroy
     parent.restore(:recursive => true)
-    assert_equal true, parent.deleted_at.nil?
-    assert_equal true, first_child.reload.deleted_at.nil?
+    assert_equal ParanoidModel.paranoia_sentinel_value, parent.deleted_at
+    assert_equal ParanoidModel.paranoia_sentinel_value, first_child.reload.deleted_at
     assert_equal true, second_child.destroyed?
 
     parent.destroy
     ParentModel.restore(parent.id, :recursive => true)
-    assert_equal true, parent.reload.deleted_at.nil?
-    assert_equal true, first_child.reload.deleted_at.nil?
+    assert_equal ParanoidModel.paranoia_sentinel_value, parent.reload.deleted_at
+    assert_equal ParanoidModel.paranoia_sentinel_value, first_child.reload.deleted_at
     assert_equal true, second_child.destroyed?
   end
 
@@ -624,8 +625,8 @@ class ParanoiaTest < test_framework
     hasOne.restore(:recursive => true)
     hasOne.save!
 
-    assert_equal true, hasOne.reload.deleted_at.nil?
-    assert_equal true, belongsTo.reload.deleted_at.nil?, "#{belongsTo.deleted_at}"
+    assert_equal ParanoidModel.paranoia_sentinel_value, hasOne.reload.deleted_at
+    assert_equal ParanoidModel.paranoia_sentinel_value, belongsTo.reload.deleted_at, "#{belongsTo.deleted_at}"
     assert_equal true, notParanoidModel.destroyed?
     assert ParanoidModelWithBelong.with_deleted.reload.count != 0, "There should be a record"
     assert ParanoidModelWithAnthorClassNameBelong.with_deleted.reload.count != 0, "There should be an other record"
@@ -655,8 +656,8 @@ class ParanoiaTest < test_framework
     newHasOne.restore(:recursive => true)
     newHasOne.save!
 
-    assert_equal true, hasOne.reload.deleted_at.nil?
-    assert_equal true, belongsTo.reload.deleted_at.nil?, "#{belongsTo.deleted_at}"
+    assert_equal ParanoidModel.paranoia_sentinel_value, hasOne.reload.deleted_at
+    assert_equal ParanoidModel.paranoia_sentinel_value, belongsTo.reload.deleted_at, "#{belongsTo.deleted_at}"
     assert_equal true, notParanoidModel.destroyed?
     assert ParanoidModelWithBelong.with_deleted.reload.count != 0, "There should be a record"
     assert ParanoidModelWithAnthorClassNameBelong.with_deleted.reload.count != 0, "There should be an other record"
@@ -685,8 +686,8 @@ class ParanoiaTest < test_framework
     ParanoidModelWithHasOne.restore(hasOne.id, :recursive => true)
     hasOne.save!
 
-    assert_equal true, hasOne.reload.deleted_at.nil?
-    assert_equal true, belongsTo.reload.deleted_at.nil?, "#{belongsTo.deleted_at}"
+    assert_equal ParanoidModel.paranoia_sentinel_value, hasOne.reload.deleted_at
+    assert_equal ParanoidModel.paranoia_sentinel_value, belongsTo.reload.deleted_at, "#{belongsTo.deleted_at}"
     assert_equal true, notParanoidModel.destroyed?
     assert ParanoidModelWithBelong.with_deleted.reload.count != 0, "There should be a record"
     assert ParanoidModelWithAnthorClassNameBelong.with_deleted.reload.count != 0, "There should be an other record"
@@ -702,7 +703,7 @@ class ParanoiaTest < test_framework
     # Does it raise NoMethodException on restore of nil
     hasOne.restore(:recursive => true)
 
-    assert hasOne.reload.deleted_at.nil?
+    assert_equal ParanoidModel.paranoia_sentinel_value, hasOne.reload.deleted_at
   end
 
   def test_restore_with_module_scoped_has_one_association
@@ -715,7 +716,7 @@ class ParanoiaTest < test_framework
     # on restore of ParanoidHasOne?
     hasOne.restore(:recursive => true)
 
-    assert hasOne.reload.deleted_at.nil?
+    assert_equal ParanoidModel.paranoia_sentinel_value, hasOne.reload.deleted_at
   end
 
   # covers #185
@@ -735,8 +736,8 @@ class ParanoiaTest < test_framework
     # without #185, belongsTos[0] will be restored instead of belongsTos[1]
     refute_nil hasOnes[0].deleted_at
     refute_nil belongsTos[0].deleted_at
-    assert_nil hasOnes[1].deleted_at
-    assert_nil belongsTos[1].deleted_at
+    assert_equal ParanoidModel.paranoia_sentinel_value, hasOnes[1].deleted_at
+    assert_equal ParanoidModel.paranoia_sentinel_value, belongsTos[1].deleted_at
   end
 
   # covers #131
@@ -792,7 +793,7 @@ class ParanoiaTest < test_framework
     assert pt1.updated_at < 10.minutes.ago
     refute pt1.deleted_at.nil?
     pt1.restore!
-    assert pt1.deleted_at.nil?
+    assert_equal ParanoidModel.paranoia_sentinel_value, pt1.deleted_at
     assert pt1.updated_at > 10.minutes.ago
   end
 
