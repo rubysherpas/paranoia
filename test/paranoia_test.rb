@@ -4,7 +4,7 @@ require 'minitest/autorun'
 require 'paranoia'
 
 test_framework = defined?(MiniTest::Test) ? MiniTest::Test : MiniTest::Unit::TestCase
-ActiveRecord::Base.raise_in_transactional_callbacks = true if ActiveRecord::VERSION::STRING >= '4.2'
+ActiveRecord::Base.raise_in_transactional_callbacks = true if ActiveRecord::VERSION::STRING >= '4.2' && ActiveRecord::VERSION::MAJOR < 5
 
 def connect!
   ActiveRecord::Base.establish_connection :adapter => 'sqlite3', database: ':memory:'
@@ -56,8 +56,15 @@ setup!
 
 class ParanoiaTest < test_framework
   def setup
-    ActiveRecord::Base.connection.tables.each do |table|
-      ActiveRecord::Base.connection.execute "DELETE FROM #{table}"
+    connection = ActiveRecord::Base.connection
+    cleaner = ->(source) {
+      ActiveRecord::Base.connection.execute "DELETE FROM #{source}"
+    }
+
+    if ActiveRecord::VERSION::MAJOR < 5
+      connection.tables.each(&cleaner)
+    else
+      connection.data_sources.each(&cleaner)
     end
   end
 
@@ -223,15 +230,9 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.deleted.count
   end
 
-  def test_active_column_model_with_uniqueness_validation_only_checks_non_deleted_records
+  def test_active_column_model_with_uniqueness_validation_checks_all_records
     a = ActiveColumnModelWithUniquenessValidation.create!(name: "A")
     a.destroy
-    b = ActiveColumnModelWithUniquenessValidation.new(name: "A")
-    assert b.valid?
-  end
-
-  def test_active_column_model_with_uniqueness_validation_still_works_on_non_deleted_records
-    a = ActiveColumnModelWithUniquenessValidation.create!(name: "A")
     b = ActiveColumnModelWithUniquenessValidation.new(name: "A")
     refute b.valid?
   end
@@ -284,7 +285,11 @@ class ParanoiaTest < test_framework
   def test_chaining_for_paranoid_models
     scope = FeaturefulModel.where(:name => "foo").only_deleted
     assert_equal "foo", scope.where_values_hash['name']
-    assert_equal 2, scope.where_values.count
+    if ActiveRecord::VERSION::MAJOR < 5
+      assert_equal 2, scope.where_values.count
+    else
+      assert_equal 2, scope.where_clause.ast.children.count
+    end
   end
 
   def test_only_destroyed_scope_for_paranoid_models
@@ -745,15 +750,9 @@ class ParanoiaTest < test_framework
     # essentially, we're just ensuring that this doesn't crash
   end
 
-  def test_validates_uniqueness_only_checks_non_deleted_records
+  def test_validates_uniqueness_checks_all_records
     a = Employer.create!(name: "A")
     a.destroy
-    b = Employer.new(name: "A")
-    assert b.valid?
-  end
-
-  def test_validates_uniqueness_still_works_on_non_deleted_records
-    a = Employer.create!(name: "A")
     b = Employer.new(name: "A")
     refute b.valid?
   end
@@ -762,7 +761,7 @@ class ParanoiaTest < test_framework
     parent1 = ParentModel.create
     pt1 = ParanoidModelWithTimestamp.create(:parent_model => parent1)
     ParanoidModelWithTimestamp.record_timestamps = false
-    pt1.update_columns(created_at: 20.years.ago, updated_at: 10.years.ago, deleted_at: 10.years.ago) 
+    pt1.update_columns(created_at: 20.years.ago, updated_at: 10.years.ago, deleted_at: 10.years.ago)
     ParanoidModelWithTimestamp.record_timestamps = true
     assert pt1.updated_at < 10.minutes.ago
     refute pt1.deleted_at.nil?
@@ -948,7 +947,13 @@ class FailCallbackModel < ActiveRecord::Base
   belongs_to :parent_model
   acts_as_paranoid
 
-  before_destroy { |_| false }
+  before_destroy { |_|
+    if ActiveRecord::VERSION::MAJOR < 5
+      false
+    else
+      throw :abort
+    end
+  }
 end
 
 class FeaturefulModel < ActiveRecord::Base

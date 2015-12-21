@@ -2,10 +2,11 @@ language: ruby
 rvm:
   - 2.0.0
   - 2.1.0
-  - 2.2.0
+  - 2.2.4
   - jruby-19mode
 
 env:
   - RAILS='~> 4.0.13'
   - RAILS='~> 4.1.10'
   - RAILS='~> 4.2.1'
+  - RAILS='~> 5.0.beta'
