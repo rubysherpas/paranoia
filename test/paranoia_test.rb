@@ -88,6 +88,14 @@ class ParanoiaTest < test_framework
     assert_equal to_param, model.to_param
   end
 
+  def test_paranoid_model_delete_outside_transaction
+    model = ParanoidModel.new
+    model.save!
+
+    model.delete
+    assert model.to_param
+  end
+
   def test_destroy_behavior_for_plain_models
     model = PlainModel.new
     assert_equal 0, model.class.count
@@ -762,7 +770,7 @@ class ParanoiaTest < test_framework
     parent1 = ParentModel.create
     pt1 = ParanoidModelWithTimestamp.create(:parent_model => parent1)
     ParanoidModelWithTimestamp.record_timestamps = false
-    pt1.update_columns(created_at: 20.years.ago, updated_at: 10.years.ago, deleted_at: 10.years.ago) 
+    pt1.update_columns(created_at: 20.years.ago, updated_at: 10.years.ago, deleted_at: 10.years.ago)
     ParanoidModelWithTimestamp.record_timestamps = true
     assert pt1.updated_at < 10.minutes.ago
     refute pt1.deleted_at.nil?
