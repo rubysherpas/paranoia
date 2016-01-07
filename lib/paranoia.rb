@@ -125,6 +125,30 @@ module Paranoia
   end
   alias :deleted? :paranoia_destroyed?
 
+  def really_destroy!
+    transaction do
+      run_callbacks(:real_destroy) do
+        dependent_reflections = self.class.reflections.select do |name, reflection|
+          reflection.options[:dependent] == :destroy
+        end
+        if dependent_reflections.any?
+          dependent_reflections.each do |name, reflection|
+            association_data = self.send(name)
+            # has_one association can return nil
+            # .paranoid? will work for both instances and classes
+            next unless association_data && association_data.paranoid?
+            if reflection.collection?
+              next association_data.with_deleted.each(&:really_destroy!)
+            end
+            association_data.really_destroy!
+          end
+        end
+        write_attribute(paranoia_column, current_time_from_proper_timezone)
+        destroy_without_paranoia
+      end
+    end
+  end
+
   private
 
   def paranoia_restore_attributes
@@ -185,31 +209,7 @@ class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
     alias :really_destroyed? :destroyed?
     alias :really_delete :delete
-
     alias :destroy_without_paranoia :destroy
-    def really_destroy!
-      transaction do
-        run_callbacks(:real_destroy) do
-          dependent_reflections = self.class.reflections.select do |name, reflection|
-            reflection.options[:dependent] == :destroy
-          end
-          if dependent_reflections.any?
-            dependent_reflections.each do |name, reflection|
-              association_data = self.send(name)
-              # has_one association can return nil
-              # .paranoid? will work for both instances and classes
-              next unless association_data && association_data.paranoid?
-              if reflection.collection?
-                next association_data.with_deleted.each(&:really_destroy!)
-              end
-              association_data.really_destroy!
-            end
-          end
-          write_attribute(paranoia_column, current_time_from_proper_timezone)
-          destroy_without_paranoia
-        end
-      end
-    end
 
     include Paranoia
     class_attribute :paranoia_column, :paranoia_sentinel_value
