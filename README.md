@@ -1,6 +1,6 @@
 # Paranoia
 
-Paranoia is a re-implementation of [acts\_as\_paranoid](http://github.com/technoweenie/acts_as_paranoid) for Rails 3 and Rails 4, using much, much, much less code.
+Paranoia is a re-implementation of [acts\_as\_paranoid](http://github.com/ActsAsParanoid/acts_as_paranoid) for Rails 3 and Rails 4, using much, much, much less code.
 
 When your app is using Paranoia, calling `destroy` on an ActiveRecord object doesn't actually destroy the database record, but just *hides* it. Paranoia does this by setting a `deleted_at` field to the current time when you `destroy` a record, and hides it by scoping all queries on your model to only include records which do not have a `deleted_at` field.
 
