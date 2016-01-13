@@ -108,6 +108,9 @@ module Paranoia
         # This only happened on Rails versions earlier than 4.1.
         noop_if_frozen = ActiveRecord.version < Gem::Version.new("4.1")
         if (noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen
+          # if a transaction exists, add the record so that after_commit
+          # callbacks can be run
+          add_to_transaction
           write_attribute paranoia_column, paranoia_sentinel_value
           update_columns(paranoia_restore_attributes)
           touch
