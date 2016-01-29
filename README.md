@@ -104,6 +104,17 @@ class Client < ActiveRecord::Base
 end
 ```
 
+
+If you want to skip adding the default scope
+
+``` ruby
+class Client < ActiveRecord::Base
+  acts_as_paranoid without_default_scope: true
+
+  ...
+end
+```
+
 If you want to access soft-deleted associations, override the getter method:
 
 ``` ruby
