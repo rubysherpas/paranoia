@@ -9,7 +9,7 @@ class ApplicationRecord < ActiveRecord::Base
   self.abstract_class = true
 end
 
-ActiveRecord::Base.raise_in_transactional_callbacks = true if ActiveRecord::VERSION::STRING >= '4.2' && ActiveRecord::VERSION::MAJOR < 5
+ActiveRecord::Base.raise_in_transactional_callbacks = true if ActiveRecord::VERSION::STRING >= '4.2'
 
 def connect!
   ActiveRecord::Base.establish_connection :adapter => 'sqlite3', database: ':memory:'
@@ -63,6 +63,16 @@ class ParanoiaTest < test_framework
   def setup
     ActiveRecord::Base.connection.data_sources.each do |table|
       ActiveRecord::Base.connection.execute "DELETE FROM #{table}"
+      connection = ActiveRecord::Base.connection
+      cleaner = ->(source) {
+        ActiveRecord::Base.connection.execute "DELETE FROM #{source}"
+      }
+
+      if ActiveRecord::VERSION::MAJOR < 5
+        connection.tables.each(&cleaner)
+      else
+        connection.data_sources.each(&cleaner)
+      end
     end
   end
 
