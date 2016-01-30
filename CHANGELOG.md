@@ -1,6 +1,6 @@
 # paranoia Changelog
 
-## 3.0
+## 3.0.0.beta1
   Rails 5 support
   
 ## 2.1.5 (2016-01-06)
