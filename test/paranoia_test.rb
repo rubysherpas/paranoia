@@ -63,16 +63,6 @@ class ParanoiaTest < test_framework
   def setup
     ActiveRecord::Base.connection.data_sources.each do |table|
       ActiveRecord::Base.connection.execute "DELETE FROM #{table}"
-      connection = ActiveRecord::Base.connection
-      cleaner = ->(source) {
-        ActiveRecord::Base.connection.execute "DELETE FROM #{source}"
-      }
-
-      if ActiveRecord::VERSION::MAJOR < 5
-        connection.tables.each(&cleaner)
-      else
-        connection.data_sources.each(&cleaner)
-      end
     end
   end
 
