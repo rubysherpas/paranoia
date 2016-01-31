@@ -57,8 +57,15 @@ setup!
 
 class ParanoiaTest < test_framework
   def setup
-    ActiveRecord::Base.connection.tables.each do |table|
-      ActiveRecord::Base.connection.execute "DELETE FROM #{table}"
+    connection = ActiveRecord::Base.connection
+    cleaner = ->(source) {
+      ActiveRecord::Base.connection.execute "DELETE FROM #{source}"
+    }
+
+    if ActiveRecord::VERSION::MAJOR < 5
+      connection.tables.each(&cleaner)
+    else
+      connection.data_sources.each(&cleaner)
     end
   end
 
@@ -770,7 +777,7 @@ class ParanoiaTest < test_framework
     parent1 = ParentModel.create
     pt1 = ParanoidModelWithTimestamp.create(:parent_model => parent1)
     ParanoidModelWithTimestamp.record_timestamps = false
-    pt1.update_columns(created_at: 20.years.ago, updated_at: 10.years.ago, deleted_at: 10.years.ago) 
+    pt1.update_columns(created_at: 20.years.ago, updated_at: 10.years.ago, deleted_at: 10.years.ago)
     ParanoidModelWithTimestamp.record_timestamps = true
     assert pt1.updated_at < 10.minutes.ago
     refute pt1.deleted_at.nil?
@@ -956,7 +963,13 @@ class FailCallbackModel < ActiveRecord::Base
   belongs_to :parent_model
   acts_as_paranoid
 
-  before_destroy { |_| false }
+  before_destroy { |_|
+    if ActiveRecord::VERSION::MAJOR < 5
+      false
+    else
+      throw :abort
+    end
+  }
 end
 
 class FeaturefulModel < ActiveRecord::Base
