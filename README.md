@@ -187,7 +187,7 @@ Of course, this is not necessary for the indexes you always use in association w
 
 ##### Unique Indexes
 
-Becuse NULL != NULL in standard SQL, we can not simply create a unique index
+Because NULL != NULL in standard SQL, we can not simply create a unique index
 on the deleted_at column and expect it to enforce that there only be one record
 with a certain combination of values.
 
