@@ -4,6 +4,11 @@ require 'minitest/autorun'
 require 'paranoia'
 
 test_framework = defined?(MiniTest::Test) ? MiniTest::Test : MiniTest::Unit::TestCase
+
+class ApplicationRecord < ActiveRecord::Base
+  self.abstract_class = true
+end
+
 ActiveRecord::Base.raise_in_transactional_callbacks = true if ActiveRecord::VERSION::STRING >= '4.2'
 
 def connect!
@@ -46,7 +51,7 @@ def setup!
   end
 end
 
-class WithDifferentConnection < ActiveRecord::Base
+class WithDifferentConnection < ApplicationRecord
   establish_connection adapter: 'sqlite3', database: ':memory:'
   connection.execute 'CREATE TABLE with_different_connections (id INTEGER NOT NULL PRIMARY KEY, deleted_at DATETIME)'
   acts_as_paranoid
@@ -56,7 +61,7 @@ setup!
 
 class ParanoiaTest < test_framework
   def setup
-    ActiveRecord::Base.connection.tables.each do |table|
+    ActiveRecord::Base.connection.data_sources.each do |table|
       ActiveRecord::Base.connection.execute "DELETE FROM #{table}"
     end
   end
@@ -86,6 +91,14 @@ class ParanoiaTest < test_framework
 
     assert model.to_param
     assert_equal to_param, model.to_param
+  end
+
+  def test_paranoid_model_delete_outside_transaction
+    model = ParanoidModel.new
+    model.save!
+
+    model.delete
+    assert model.to_param
   end
 
   def test_destroy_behavior_for_plain_models
@@ -284,7 +297,8 @@ class ParanoiaTest < test_framework
   def test_chaining_for_paranoid_models
     scope = FeaturefulModel.where(:name => "foo").only_deleted
     assert_equal "foo", scope.where_values_hash['name']
-    assert_equal 2, scope.where_values.count
+    # assert_equal 2, scope.where_values.count
+    assert_equal 2, scope.where_clause.ast.children.count
   end
 
   def test_only_destroyed_scope_for_paranoid_models
@@ -929,41 +943,48 @@ end
 
 # Helper classes
 
-class ParanoidModel < ActiveRecord::Base
+class ParanoidModel < ApplicationRecord
   belongs_to :parent_model
   acts_as_paranoid
 end
 
-class ParanoidWithUnparanoids < ActiveRecord::Base
+class ParanoidWithUnparanoids < ApplicationRecord
   self.table_name = 'plain_models'
   has_many :unparanoid_unique_models
 end
 
-class UnparanoidUniqueModel < ActiveRecord::Base
+class UnparanoidUniqueModel < ApplicationRecord
   belongs_to :paranoid_with_unparanoids
   validates :name, :uniqueness => true
 end
 
-class FailCallbackModel < ActiveRecord::Base
+class FailCallbackModel < ApplicationRecord
   belongs_to :parent_model
   acts_as_paranoid
 
-  before_destroy { |_| false }
+  # before_destroy { |_| false }
+  before_destroy { |_|
+    if ActiveRecord::VERSION::MAJOR < 5
+      false
+    else
+      throw :abort
+    end
+  }
 end
 
-class FeaturefulModel < ActiveRecord::Base
+class FeaturefulModel < ApplicationRecord
   acts_as_paranoid
   validates :name, :presence => true, :uniqueness => true
 end
 
-class NonParanoidChildModel < ActiveRecord::Base
+class NonParanoidChildModel < ApplicationRecord
   validates :name, :presence => true, :uniqueness => true
 end
 
-class PlainModel < ActiveRecord::Base
+class PlainModel < ApplicationRecord
 end
 
-class CallbackModel < ActiveRecord::Base
+class CallbackModel < ApplicationRecord
   acts_as_paranoid
   before_destroy      { |model| model.instance_variable_set :@destroy_callback_called, true }
   before_restore      { |model| model.instance_variable_set :@restore_callback_called, true }
@@ -981,7 +1002,7 @@ class CallbackModel < ActiveRecord::Base
   end
 end
 
-class ParentModel < ActiveRecord::Base
+class ParentModel < ApplicationRecord
   acts_as_paranoid
   has_many :paranoid_models
   has_many :related_models
@@ -992,11 +1013,11 @@ class ParentModel < ActiveRecord::Base
   has_one :polymorphic_model, as: :parent, dependent: :destroy
 end
 
-class ParentModelWithCounterCacheColumn < ActiveRecord::Base
+class ParentModelWithCounterCacheColumn < ApplicationRecord
   has_many :related_models
 end
 
-class RelatedModel < ActiveRecord::Base
+class RelatedModel < ApplicationRecord
   acts_as_paranoid
   belongs_to :parent_model
   belongs_to :parent_model_with_counter_cache_column, counter_cache: true
@@ -1015,34 +1036,34 @@ class RelatedModel < ActiveRecord::Base
   end
 end
 
-class Employer < ActiveRecord::Base
+class Employer < ApplicationRecord
   acts_as_paranoid
   validates_uniqueness_of :name
   has_many :jobs
   has_many :employees, :through => :jobs
 end
 
-class Employee < ActiveRecord::Base
+class Employee < ApplicationRecord
   acts_as_paranoid
   has_many :jobs
   has_many :employers, :through => :jobs
 end
 
-class Job < ActiveRecord::Base
+class Job < ApplicationRecord
   acts_as_paranoid
   belongs_to :employer
   belongs_to :employee
 end
 
-class CustomColumnModel < ActiveRecord::Base
+class CustomColumnModel < ApplicationRecord
   acts_as_paranoid column: :destroyed_at
 end
 
-class CustomSentinelModel < ActiveRecord::Base
+class CustomSentinelModel < ApplicationRecord
   acts_as_paranoid sentinel_value: DateTime.new(0)
 end
 
-class ActiveColumnModel < ActiveRecord::Base
+class ActiveColumnModel < ApplicationRecord
   acts_as_paranoid column: :active, sentinel_value: true
 
   def paranoia_restore_attributes
@@ -1060,7 +1081,7 @@ class ActiveColumnModel < ActiveRecord::Base
   end
 end
 
-class ActiveColumnModelWithUniquenessValidation < ActiveRecord::Base
+class ActiveColumnModelWithUniquenessValidation < ApplicationRecord
   validates :name, :uniqueness => true
   acts_as_paranoid column: :active, sentinel_value: true
 
@@ -1079,7 +1100,7 @@ class ActiveColumnModelWithUniquenessValidation < ActiveRecord::Base
   end
 end
 
-class NonParanoidModel < ActiveRecord::Base
+class NonParanoidModel < ApplicationRecord
 end
 
 class ParanoidModelWithObservers < ParanoidModel
@@ -1104,7 +1125,7 @@ class ParanoidModelWithHasOne < ParanoidModel
   has_one :not_paranoid_model_with_belong, :dependent => :destroy
 end
 
-class ParanoidModelWithHasOneAndBuild < ActiveRecord::Base
+class ParanoidModelWithHasOneAndBuild < ApplicationRecord
   has_one :paranoid_model_with_build_belong, :dependent => :destroy
   validates :color, :presence => true
   after_validation :build_paranoid_model_with_build_belong, on: :create
@@ -1115,33 +1136,33 @@ class ParanoidModelWithHasOneAndBuild < ActiveRecord::Base
   end
 end
 
-class ParanoidModelWithBuildBelong < ActiveRecord::Base
+class ParanoidModelWithBuildBelong < ApplicationRecord
   acts_as_paranoid
   validates :name, :presence => true
   belongs_to :paranoid_model_with_has_one_and_build
 end
 
-class ParanoidModelWithBelong < ActiveRecord::Base
+class ParanoidModelWithBelong < ApplicationRecord
   acts_as_paranoid
   belongs_to :paranoid_model_with_has_one
 end
 
-class ParanoidModelWithAnthorClassNameBelong < ActiveRecord::Base
+class ParanoidModelWithAnthorClassNameBelong < ApplicationRecord
   acts_as_paranoid
   belongs_to :paranoid_model_with_has_one
 end
 
-class ParanoidModelWithForeignKeyBelong < ActiveRecord::Base
+class ParanoidModelWithForeignKeyBelong < ApplicationRecord
   acts_as_paranoid
   belongs_to :paranoid_model_with_has_one
 end
 
-class ParanoidModelWithTimestamp < ActiveRecord::Base
+class ParanoidModelWithTimestamp < ApplicationRecord
   belongs_to :parent_model
   acts_as_paranoid
 end
 
-class NotParanoidModelWithBelong < ActiveRecord::Base
+class NotParanoidModelWithBelong < ApplicationRecord
   belongs_to :paranoid_model_with_has_one
 end
 
@@ -1153,17 +1174,17 @@ class FlaggedModelWithCustomIndex < PlainModel
   acts_as_paranoid :flag_column => :is_deleted, :indexed_column => :is_deleted
 end
 
-class AsplodeModel < ActiveRecord::Base
+class AsplodeModel < ApplicationRecord
   acts_as_paranoid
   before_destroy do |r|
     raise StandardError, 'ASPLODE!'
   end
 end
 
-class NoConnectionModel < ActiveRecord::Base
+class NoConnectionModel < ApplicationRecord
 end
 
-class PolymorphicModel < ActiveRecord::Base
+class PolymorphicModel < ApplicationRecord
   acts_as_paranoid
   belongs_to :parent, polymorphic: true
 end
@@ -1173,12 +1194,12 @@ module Namespaced
     "namespaced_"
   end
 
-  class ParanoidHasOne < ActiveRecord::Base
+  class ParanoidHasOne < ApplicationRecord
     acts_as_paranoid
     has_one :paranoid_belongs_to, dependent: :destroy
   end
 
-  class ParanoidBelongsTo < ActiveRecord::Base
+  class ParanoidBelongsTo < ApplicationRecord
     acts_as_paranoid
     belongs_to :paranoid_has_one
   end

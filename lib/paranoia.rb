@@ -93,7 +93,7 @@ module Paranoia
     if persisted?
       # if a transaction exists, add the record so that after_commit
       # callbacks can be run
-      add_to_transaction
+      add_to_transaction unless self.class.connection.current_transaction.closed?
       update_columns(paranoia_destroy_attributes)
     elsif !frozen?
       assign_attributes(paranoia_destroy_attributes)
@@ -256,16 +256,14 @@ end
 
 require 'paranoia/rspec' if defined? RSpec
 
-module ActiveRecord
-  module Validations
-    class UniquenessValidator < ActiveModel::EachValidator
-      protected
-      def build_relation_with_paranoia(klass, table, attribute, value)
-        relation = build_relation_without_paranoia(klass, table, attribute, value)
-        return relation unless klass.respond_to?(:paranoia_column)
-        relation.and(klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value))
-      end
-      alias_method_chain :build_relation, :paranoia
+module ParanoiaBuildRelation
+    protected
+    
+    def build_relation(klass, table, attribute, value)
+      relation = super(klass, table, attribute, value)
+      return relation unless klass.respond_to?(:paranoia_column)
+      relation.where(klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value))
     end
-  end
 end
+
+ActiveRecord::Validations::UniquenessValidator.send(:prepend, ParanoiaBuildRelation)
