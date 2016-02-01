@@ -204,6 +204,13 @@ class ParanoiaTest < test_framework
     assert_equal nil, ParanoidModel.paranoia_sentinel_value
   end
 
+  def test_without_default_scope_option
+    model = WithoutDefaultScopeModel.create!(name: "A", deleted_at: Time.now)
+    assert_equal 1, model.class.count
+    assert_equal 1, model.class.only_deleted.count
+    assert_equal 0, model.class.without_deleted.count
+  end
+
   def test_active_column_model
     model = ActiveColumnModel.new
     assert_equal 0, model.class.count
@@ -1040,6 +1047,10 @@ end
 
 class CustomSentinelModel < ActiveRecord::Base
   acts_as_paranoid sentinel_value: DateTime.new(0)
+end
+
+class WithoutDefaultScopeModel < ActiveRecord::Base
+  acts_as_paranoid without_default_scope: true
 end
 
 class ActiveColumnModel < ActiveRecord::Base
