@@ -40,7 +40,8 @@ def setup!
     'namespaced_paranoid_belongs_tos' => 'deleted_at DATETIME, paranoid_has_one_id INTEGER',
     'unparanoid_unique_models' => 'name VARCHAR(32), paranoid_with_unparanoids_id INTEGER',
     'active_column_models' => 'deleted_at DATETIME, active BOOLEAN',
-    'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN'
+    'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
+    'without_default_scope_models' => 'deleted_at DATETIME'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -202,6 +203,14 @@ class ParanoiaTest < test_framework
 
   def test_default_sentinel_value
     assert_equal nil, ParanoidModel.paranoia_sentinel_value
+  end
+
+  def test_without_default_scope_option
+    model = WithoutDefaultScopeModel.create
+    model.destroy
+    assert_equal 1, model.class.count
+    assert_equal 1, model.class.only_deleted.count
+    assert_equal 0, model.class.where(deleted_at: nil).count
   end
 
   def test_active_column_model
@@ -1040,6 +1049,10 @@ end
 
 class CustomSentinelModel < ActiveRecord::Base
   acts_as_paranoid sentinel_value: DateTime.new(0)
+end
+
+class WithoutDefaultScopeModel < ActiveRecord::Base
+  acts_as_paranoid without_default_scope: true
 end
 
 class ActiveColumnModel < ActiveRecord::Base
