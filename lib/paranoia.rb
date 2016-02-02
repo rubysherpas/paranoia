@@ -39,6 +39,10 @@ module Paranoia
       with_deleted.where("#{quoted_paranoia_column} IS NULL OR #{quoted_paranoia_column} != ?", paranoia_sentinel_value)
     end
     alias :deleted :only_deleted
+    
+    def not_deleted
+      where(paranoia_column => paranoia_sentinel_value)
+    end
 
     def restore(id_or_ids, opts = {})
       ids = Array(id_or_ids).flatten
