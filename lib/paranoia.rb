@@ -207,9 +207,9 @@ end
 
 class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
-    alias :really_destroyed? :destroyed?
-    alias :really_delete :delete
-    alias :destroy_without_paranoia :destroy
+    alias_method :really_destroyed?, :destroyed?
+    alias_method :really_delete, :delete
+    alias_method :destroy_without_paranoia, :destroy
 
     include Paranoia
     class_attribute :paranoia_column, :paranoia_sentinel_value

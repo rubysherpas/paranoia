@@ -392,9 +392,9 @@ class ParanoiaTest < test_framework
     # Just to demonstrate the AR behaviour
     model = NonParanoidModel.new
     model.destroy!
-    assert model.really_destroyed?
+    assert model.destroyed?
     model.destroy!
-    assert model.really_destroyed?
+    assert model.destroyed?
 
     # Mirrors behaviour above
     model = ParanoidModel.new
