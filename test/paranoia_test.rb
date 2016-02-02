@@ -232,11 +232,11 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.deleted.count
   end
 
-  def test_active_column_model_with_uniqueness_validation_only_checks_non_deleted_records
+  def test_active_column_model_with_uniqueness_validation_checks_all_records
     a = ActiveColumnModelWithUniquenessValidation.create!(name: "A")
     a.destroy
     b = ActiveColumnModelWithUniquenessValidation.new(name: "A")
-    assert b.valid?
+    refute b.valid?
   end
 
   def test_active_column_model_with_uniqueness_validation_still_works_on_non_deleted_records
@@ -754,11 +754,11 @@ class ParanoiaTest < test_framework
     # essentially, we're just ensuring that this doesn't crash
   end
 
-  def test_validates_uniqueness_only_checks_non_deleted_records
+  def test_validates_uniqueness_checks_all_records
     a = Employer.create!(name: "A")
     a.destroy
     b = Employer.new(name: "A")
-    assert b.valid?
+    refute b.valid?
   end
 
   def test_validates_uniqueness_still_works_on_non_deleted_records
