@@ -38,7 +38,7 @@ module Paranoia
       quoted_paranoia_column = connection.quote_column_name(paranoia_column)
       with_deleted.where("#{quoted_paranoia_column} IS NULL OR #{quoted_paranoia_column} != ?", paranoia_sentinel_value)
     end
-    alias :deleted :only_deleted
+    alias_method :deleted, :only_deleted
 
     def restore(id_or_ids, opts = {})
       ids = Array(id_or_ids).flatten
@@ -207,9 +207,9 @@ end
 
 class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
-    alias :really_destroyed? :destroyed?
-    alias :really_delete :delete
-    alias :destroy_without_paranoia :destroy
+    alias_method :really_destroyed?, :destroyed?
+    alias_method :really_delete, :delete
+    alias_method :destroy_without_paranoia, :destroy
 
     include Paranoia
     class_attribute :paranoia_column, :paranoia_sentinel_value
@@ -261,14 +261,21 @@ require 'paranoia/rspec' if defined? RSpec
 
 module ActiveRecord
   module Validations
-    class UniquenessValidator < ActiveModel::EachValidator
-      protected
-      def build_relation_with_paranoia(klass, table, attribute, value)
-        relation = build_relation_without_paranoia(klass, table, attribute, value)
+    module UniquenessParanoiaValidator
+      def build_relation(klass, table, attribute, value)
+        relation = super(klass, table, attribute, value)
         return relation unless klass.respond_to?(:paranoia_column)
-        relation.and(klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value))
+        arel_paranoia_scope = klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value)
+        if ActiveRecord::VERSION::STRING >= "5.0"
+          relation.where(arel_paranoia_scope)
+        else
+          relation.and(arel_paranoia_scope)
+        end
       end
-      alias_method_chain :build_relation, :paranoia
+    end
+
+    class UniquenessValidator < ActiveModel::EachValidator
+      prepend UniquenessParanoiaValidator
     end
   end
 end
