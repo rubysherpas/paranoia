@@ -219,7 +219,8 @@ class ActiveRecord::Base
     def self.paranoia_scope
       where(paranoia_column => paranoia_sentinel_value)
     end
-    
+    class << self; alias_method :without_deleted, :paranoia_scope end
+
     unless options[:without_default_scope]
       default_scope { paranoia_scope }
     end
