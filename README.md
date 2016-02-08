@@ -8,7 +8,9 @@ If you wish to actually destroy an object you may call `really_destroy!`. **WARN
 
 If a record has `has_many` associations defined AND those associations have `dependent: :destroy` set on them, then they will also be soft-deleted if `acts_as_paranoid` is set,  otherwise the normal destroy will be called.
 
+
 ## Getting Started Video
+
 Setup and basic usage of the paranoia gem
 [GoRails #41](https://gorails.com/episodes/soft-delete-with-paranoia)
 
@@ -20,10 +22,10 @@ For Rails 3, please use version 1 of Paranoia:
 gem "paranoia", "~> 1.0"
 ```
 
-For Rails 4 or 5, please use version 2 of Paranoia:
+For Rails 4 or 5, please use version 3 of Paranoia:
 
 ``` ruby
-gem "paranoia", "~> 2.0"
+gem "paranoia", "3.0.0"
 ```
 
 Of course you can install this from GitHub as well:

@@ -4,21 +4,15 @@ require File.expand_path("../lib/paranoia/version", __FILE__)
 Gem::Specification.new do |s|
   s.name        = "paranoia"
   s.version     = Paranoia::VERSION
-  s.platform    = Gem::Platform::RUBY
-  s.authors     = ["radarlistener@gmail.com"]
-  s.email       = []
-  s.homepage    = "http://rubygems.org/gems/paranoia"
+  s.authors     = ["Kurtis Rainbolt-Greene (@krainboltgreene) <me@kurtisrainboltgreene>"]
+  s.homepage    = "https://rubysherpas.github.io/paranoia"
   s.summary     = "Paranoia is a re-implementation of acts_as_paranoid for Rails 3, using much, much, much less code."
-  s.description = "Paranoia is a re-implementation of acts_as_paranoid for Rails 3, using much, much, much less code. You would use either plugin / gem if you wished that when you called destroy on an Active Record object that it didn't actually destroy it, but just \"hid\" the record. Paranoia does this by setting a deleted_at field to the current time when you destroy a record, and hides it by scoping all queries on your model to only include records which do not have a deleted_at field."
-
-  s.required_rubygems_version = ">= 1.3.6"
-  s.rubyforge_project         = "paranoia"
-
+  s.description = s.summary
   s.required_ruby_version = '>= 2.0'
 
   s.add_dependency 'activerecord', '>= 4.0', '< 5.1'
 
-  s.add_development_dependency "bundler", ">= 1.0.0"
+  s.add_development_dependency "bundler"
   s.add_development_dependency "rake"
 
   s.files        = `git ls-files`.split("\n")
