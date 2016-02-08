@@ -105,7 +105,7 @@ end
 ```
 
 
-If you want to skip adding the default scope
+If you want to skip adding the default scope:
 
 ``` ruby
 class Client < ActiveRecord::Base
@@ -137,6 +137,12 @@ If you want to find all records, even those which are deleted:
 
 ``` ruby
 Client.with_deleted
+```
+
+If you want to exclude deleted records, when not able to use the default_scope (e.g. when using without_default_scope):
+
+``` ruby
+Client.without_deleted
 ```
 
 If you want to find only the deleted records:
