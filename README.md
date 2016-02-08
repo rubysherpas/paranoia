@@ -255,7 +255,7 @@ The `recover` method in `acts_as_paranoid` runs `update` callbacks.  Paranoia's
 
 ## Callbacks
 
-Paranoia provides few callbacks. It triggers `destroy` callback when the record is marked as deleted and `real_destroy` when the record is completely removed from database. It also calls `restore` callback when the record is restored via paranoia
+Paranoia provides several callbacks. It triggers `destroy` callback when the record is marked as deleted and `real_destroy` when the record is completely removed from database. It also calls `restore` callback when the record is restored via paranoia
 
 For example if you want to index your records in some search engine you can go like this:
 
