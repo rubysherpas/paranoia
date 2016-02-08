@@ -38,7 +38,7 @@ module Paranoia
       quoted_paranoia_column = connection.quote_column_name(paranoia_column)
       with_deleted.where("#{quoted_paranoia_column} IS NULL OR #{quoted_paranoia_column} != ?", paranoia_sentinel_value)
     end
-    alias :deleted :only_deleted
+    alias_method :deleted, :only_deleted
 
     def restore(id_or_ids, opts = {})
       ids = Array(id_or_ids).flatten
@@ -125,6 +125,30 @@ module Paranoia
   end
   alias :deleted? :paranoia_destroyed?
 
+  def really_destroy!
+    transaction do
+      run_callbacks(:real_destroy) do
+        dependent_reflections = self.class.reflections.select do |name, reflection|
+          reflection.options[:dependent] == :destroy
+        end
+        if dependent_reflections.any?
+          dependent_reflections.each do |name, reflection|
+            association_data = self.send(name)
+            # has_one association can return nil
+            # .paranoid? will work for both instances and classes
+            next unless association_data && association_data.paranoid?
+            if reflection.collection?
+              next association_data.with_deleted.each(&:really_destroy!)
+            end
+            association_data.really_destroy!
+          end
+        end
+        write_attribute(paranoia_column, current_time_from_proper_timezone)
+        destroy_without_paranoia
+      end
+    end
+  end
+
   private
 
   def paranoia_restore_attributes
@@ -183,33 +207,9 @@ end
 
 class ActiveRecord::Base
   def self.acts_as_paranoid(options={})
-    alias :really_destroyed? :destroyed?
-    alias :really_delete :delete
-
-    alias :destroy_without_paranoia :destroy
-    def really_destroy!
-      transaction do
-        run_callbacks(:real_destroy) do
-          dependent_reflections = self.class.reflections.select do |name, reflection|
-            reflection.options[:dependent] == :destroy
-          end
-          if dependent_reflections.any?
-            dependent_reflections.each do |name, reflection|
-              association_data = self.send(name)
-              # has_one association can return nil
-              # .paranoid? will work for both instances and classes
-              next unless association_data && association_data.paranoid?
-              if reflection.collection?
-                next association_data.with_deleted.each(&:really_destroy!)
-              end
-              association_data.really_destroy!
-            end
-          end
-          write_attribute(paranoia_column, current_time_from_proper_timezone)
-          destroy_without_paranoia
-        end
-      end
-    end
+    alias_method :really_destroyed?, :destroyed?
+    alias_method :really_delete, :delete
+    alias_method :destroy_without_paranoia, :destroy
 
     include Paranoia
     class_attribute :paranoia_column, :paranoia_sentinel_value
@@ -219,7 +219,11 @@ class ActiveRecord::Base
     def self.paranoia_scope
       where(paranoia_column => paranoia_sentinel_value)
     end
-    default_scope { paranoia_scope }
+    class << self; alias_method :without_deleted, :paranoia_scope end
+
+    unless options[:without_default_scope]
+      default_scope { paranoia_scope }
+    end
 
     before_restore {
       self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
@@ -258,14 +262,21 @@ require 'paranoia/rspec' if defined? RSpec
 
 module ActiveRecord
   module Validations
-    class UniquenessValidator < ActiveModel::EachValidator
-      protected
-      def build_relation_with_paranoia(klass, table, attribute, value)
-        relation = build_relation_without_paranoia(klass, table, attribute, value)
+    module UniquenessParanoiaValidator
+      def build_relation(klass, table, attribute, value)
+        relation = super(klass, table, attribute, value)
         return relation unless klass.respond_to?(:paranoia_column)
-        relation.and(klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value))
+        arel_paranoia_scope = klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value)
+        if ActiveRecord::VERSION::STRING >= "5.0"
+          relation.where(arel_paranoia_scope)
+        else
+          relation.and(arel_paranoia_scope)
+        end
       end
-      alias_method_chain :build_relation, :paranoia
+    end
+
+    class UniquenessValidator < ActiveModel::EachValidator
+      prepend UniquenessParanoiaValidator
     end
   end
 end

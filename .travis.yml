@@ -1,12 +1,25 @@
+sudo: false
 language: ruby
 rvm:
   - 2.0.0
   - 2.1.8
   - 2.2.4
   - 2.3.0
-  - jruby-19mode
+  - jruby-9.0.5.0
 
 env:
-  - RAILS='~> 4.0.13'
-  - RAILS='~> 4.1.10'
-  - RAILS='~> 4.2.1'
+  matrix:
+    - RAILS='~> 4.0.13'
+    - RAILS='~> 4.1.10'
+    - RAILS='~> 4.2.1'
+    - RAILS='~> 5.0.0.beta1'
+
+matrix:
+  exclude:
+    - env: RAILS='~> 5.0.0.beta1'
+      rvm: 2.0.0
+    - env: RAILS='~> 5.0.0.beta1'
+      rvm: 2.1.8
+  allow_failures:
+    - env: RAILS='~> 5.0.0.beta1'
+      rvm: jruby-9.0.5.0

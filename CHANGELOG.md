@@ -1,5 +1,23 @@
 # paranoia Changelog
 
+## 2.2.0 (unreleased)
+
+* Ruby 2.0 or greater is required
+* Rails 5.0.0.beta1.1 support [@pigeonworks](https://github.com/pigeonworks) [@halostatue](https://github.com/halostatue) and [@gagalago](https://github.com/gagalago)
+* Previously `#really_destroyed?` may have been defined on non-paranoid models, it is now only available on paranoid models, use regular `#destroyed?` instead.
+
+## 2.1.5 (2016-01-06)
+
+* Ruby 2.3 support
+
+## 2.1.4
+
+## 2.1.3
+
+## 2.1.2
+
+## 2.1.1
+
 ## 2.1.0 (2015-01-23)
 
 ### Major changes
