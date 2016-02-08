@@ -41,6 +41,7 @@ def setup!
     'unparanoid_unique_models' => 'name VARCHAR(32), paranoid_with_unparanoids_id INTEGER',
     'active_column_models' => 'deleted_at DATETIME, active BOOLEAN',
     'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
+    'paranoid_children' => 'deleted_at DATETIME',
     'without_default_scope_models' => 'deleted_at DATETIME'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
@@ -936,6 +937,14 @@ class ParanoiaTest < test_framework
     end
   end
 
+  def test_abstract_intermediary
+    ParanoidChild.create!
+    # triggers https://github.com/rails/rails/issues/10658 /
+    # https://github.com/rails/rails/issues/23413
+    # if default_scope is specified as a closure instead of a class method
+    child = ParanoidChild.first
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
@@ -1207,4 +1216,12 @@ module Namespaced
     acts_as_paranoid
     belongs_to :paranoid_has_one
   end
+end
+
+class AbstractIntermediary < ActiveRecord::Base
+  self.abstract_class = true
+  acts_as_paranoid
+end
+
+class ParanoidChild < AbstractIntermediary
 end
