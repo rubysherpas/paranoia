@@ -222,7 +222,16 @@ class ActiveRecord::Base
     class << self; alias_method :without_deleted, :paranoia_scope end
 
     unless options[:without_default_scope]
+      # this default_scope declaration sets paranoia_sentinel_value
+      # in constructors of objects using Paranoia
       default_scope { paranoia_scope }
+      # this class method makes it possible to use acts_as_paranoid on
+      # abstract ActiveRecord classes, working around
+      # https://github.com/rails/rails/issues/10658 and
+      # https://github.com/rails/rails/issues/23413
+      def self.default_scope
+        paranoia_scope
+      end
     end
 
     before_restore {
