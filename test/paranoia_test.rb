@@ -69,6 +69,19 @@ class ParanoiaTest < test_framework
     end
   end
 
+  def with_stubbed_current_time(value, &block)
+    metaclass = Time.instance_eval{ class << self; self; end }
+    metaclass.send(:alias_method, :__original_time_now, :now)
+    metaclass.send(:define_method, :now){ value }
+    begin
+      block.call
+    ensure
+      metaclass.send(:undef_method, :now)
+      metaclass.send(:alias_method, :now, :__original_time_now)
+      metaclass.send(:undef_method, :__original_time_now)
+    end
+  end
+
   def test_plain_model_class_is_not_paranoid
     assert_equal false, PlainModel.paranoid?
   end
@@ -577,6 +590,7 @@ class ParanoiaTest < test_framework
     parent = ParentModel.create
     first_child = parent.very_related_models.create
     second_child = parent.non_paranoid_models.create
+    third_child = parent.very_related_models.create
 
     parent.destroy
     assert_equal false, parent.deleted_at.nil?
@@ -599,6 +613,18 @@ class ParanoiaTest < test_framework
     assert_equal true, parent.reload.deleted_at.nil?
     assert_equal true, first_child.reload.deleted_at.nil?
     assert_equal true, second_child.destroyed?
+
+    with_stubbed_current_time(Time.at(0)) do
+      first_child.destroy
+    end
+    with_stubbed_current_time(Time.at(3600)) do
+      parent.destroy
+    end
+    ParentModel.restore(parent.id, :recursive => true, :recovery_window => 5.minute)
+    assert_equal true, parent.reload.deleted_at.nil?
+    assert_equal false, first_child.reload.deleted_at.nil?
+    assert_equal true, second_child.destroyed?
+    assert_equal true, third_child.reload.deleted_at.nil?
   end
 
   # regression tests for #118
@@ -851,6 +877,19 @@ class ParanoiaTest < test_framework
 
     assert_equal 3, parent.very_related_models.count
     assert_equal 3, parent.very_related_models.size
+  end
+
+  def test_restore_recursive_on_polymorphic_has_one_association
+    parent = ParentModel.create
+    polymorphic = PolymorphicModel.create(parent: parent)
+
+    parent.destroy
+
+    assert_equal 0, polymorphic.class.count
+
+    parent.restore(recursive: true)
+
+    assert_equal 1, polymorphic.class.count
   end
 
   def test_model_without_db_connection
@@ -1251,6 +1290,11 @@ class AsplodeModel < ActiveRecord::Base
   before_destroy do |r|
     raise StandardError, 'ASPLODE!'
   end
+end
+
+class PolymorphicModel < ActiveRecord::Base
+  acts_as_paranoid
+  belongs_to :parent, polymorphic: true
 end
 
 class NoConnectionModel < ActiveRecord::Base

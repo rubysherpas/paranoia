@@ -2,6 +2,7 @@ require 'active_record' unless defined? ActiveRecord
 
 module Paranoia
   @@default_sentinel_value = nil
+  @@default_dependent_recovery_window = 120
 
   # Change default_sentinel_value in a rails initilizer
   def self.default_sentinel_value=(val)
@@ -10,6 +11,10 @@ module Paranoia
 
   def self.default_sentinel_value
     @@default_sentinel_value
+  end
+
+  def self.default_dependent_recovery_window
+    @@default_dependent_recovery_window
   end
 
   def self.included(klazz)
@@ -102,17 +107,21 @@ module Paranoia
   end
 
   def restore!(opts = {})
+    opts.merge!(:recovery_window => paranoia_dependent_recovery_window)
     self.class.transaction do
       run_callbacks(:restore) do
         # Fixes a bug where the build would error because attributes were frozen.
         # This only happened on Rails versions earlier than 4.1.
         noop_if_frozen = ActiveRecord.version < Gem::Version.new("4.1")
+        deleted_at = send(paranoia_column)
         if (noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen
           write_attribute paranoia_column, paranoia_sentinel_value
           update_columns(paranoia_restore_attributes)
           touch
         end
-        restore_associated_records if opts[:recursive]
+        if opts[:recursive]
+          restore_associated_records(deleted_at, opts[:recovery_window])
+        end
       end
     end
 
@@ -165,7 +174,7 @@ module Paranoia
 
   # restore associated records that have been soft deleted when
   # we called #destroy
-  def restore_associated_records
+  def restore_associated_records(deleted_at, window)
     destroyed_associations = self.class.reflect_on_all_associations.select do |association|
       association.options[:dependent] == :destroy
     end
@@ -176,9 +185,12 @@ module Paranoia
       unless association_data.nil?
         if association_data.paranoid?
           if association.collection?
-            association_data.only_deleted.each { |record| record.restore(:recursive => true) }
+            x = association_data.only_deleted.
+              where("#{association.quoted_table_name}.#{paranoia_column} < ?", deleted_at + window).
+              where("#{association.quoted_table_name}.#{paranoia_column} > ?", deleted_at - window).
+              each { |record| record.restore(:recursive => true) }
           else
-            association_data.restore(:recursive => true)
+            association_data.restore(:recursive => true, :recovery_window => window)
           end
         end
       end
@@ -212,10 +224,12 @@ class ActiveRecord::Base
     alias_method :destroy_without_paranoia, :destroy
 
     include Paranoia
-    class_attribute :paranoia_column, :paranoia_sentinel_value
+    class_attribute :paranoia_column, :paranoia_sentinel_value, :paranoia_dependent_recovery_window
 
     self.paranoia_column = (options[:column] || :deleted_at).to_s
     self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
+    self.paranoia_dependent_recovery_window = options[:dependent_recovery_window] || Paranoia.default_dependent_recovery_window
+
     def self.paranoia_scope
       where(paranoia_column => paranoia_sentinel_value)
     end
