@@ -918,6 +918,64 @@ class ParanoiaTest < test_framework
     related.valid?
   end
 
+  def test_delete_all
+    model = ParanoidModel
+    count = 3
+    models = count.times.map { model.new }
+    assert_equal 0, model.count
+    models.each(&:save!)
+
+    assert_equal count, model.count
+    model.delete_all
+
+    assert_equal 0, model.count
+    assert_equal count, model.with_deleted.count
+
+    assert model.with_deleted.all?(&:deleted?)
+  end
+
+  def test_delete_all_for_non_paranoid_model
+    model = PlainModel
+    count = 3
+    models = count.times.map { model.new }
+    assert_equal 0, model.count
+    models.each(&:save!)
+
+    assert_equal count, model.count
+    model.delete_all
+
+    assert_equal 0, model.count
+    assert_equal 0, model.unscoped.count
+  end
+
+  def test_destroy_all
+    model = ParanoidModel
+    count = 3
+    models = count.times.map { model.new }
+    assert_equal 0, model.count
+    models.each(&:save!)
+
+    assert_equal count, model.count
+    model.destroy_all
+
+    assert_equal 0, model.count
+    assert_equal 3, model.unscoped.count
+  end
+
+  def test_destroy_all_for_non_paranoid_model
+    model = PlainModel
+    count = 3
+    models = count.times.map { model.new }
+    assert_equal 0, model.count
+    models.each(&:save!)
+
+    assert_equal count, model.count
+    model.destroy_all
+
+    assert_equal 0, model.count
+    assert_equal 0, model.unscoped.count
+  end
+
   # TODO: find a fix for Rails 4.1
   if ActiveRecord::VERSION::STRING !~ /\A4\.1/
     def test_counter_cache_column_update_on_really_destroy
