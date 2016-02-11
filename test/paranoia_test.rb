@@ -133,6 +133,14 @@ class ParanoiaTest < test_framework
     assert model.instance_variable_get(:@after_commit_callback_called)
   end
 
+  def test_destroy_behavior_for_conditional_models_callbacks
+    model = ConditionalCallbackModel.new
+    model.save
+    model.remove_called_variables     # clear called callback flags
+    model.destroy
+
+    assert model.instance_variable_get(:@after_commit_callback_called)
+  end
 
   def test_delete_behavior_for_plain_models_callbacks
     model = CallbackModel.new
@@ -1064,6 +1072,18 @@ class CallbackModel < ActiveRecord::Base
   after_commit        { |model| model.instance_variable_set :@after_commit_callback_called, true }
 
   validate            { |model| model.instance_variable_set :@validate_called, true }
+
+  def remove_called_variables
+    instance_variables.each {|name| (name.to_s.end_with?('_called')) ? remove_instance_variable(name) : nil}
+  end
+end
+
+class ConditionalCallbackModel < ActiveRecord::Base
+  self.table_name = 'callback_models'
+
+  acts_as_paranoid
+
+  after_commit   -> { instance_variable_set :@after_commit_callback_called, true }, on: :destroy
 
   def remove_called_variables
     instance_variables.each {|name| (name.to_s.end_with?('_called')) ? remove_instance_variable(name) : nil}
