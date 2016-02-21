@@ -775,6 +775,13 @@ class ParanoiaTest < test_framework
     refute b.valid?
   end
 
+  def test_updated_at_modification_on_destroy
+    paranoid_model = ParanoidModelWithTimestamp.create(:parent_model => ParentModel.create, :updated_at => 1.day.ago)
+    assert paranoid_model.updated_at < 10.minutes.ago
+    paranoid_model.destroy
+    assert paranoid_model.updated_at > 10.minutes.ago
+  end
+
   def test_updated_at_modification_on_restore
     parent1 = ParentModel.create
     pt1 = ParanoidModelWithTimestamp.create(:parent_model => parent1)
