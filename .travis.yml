@@ -2,9 +2,9 @@ sudo: false
 language: ruby
 rvm:
   - 2.0.0
-  - 2.1.8
-  - 2.2.4
-  - 2.3.0
+  - 2.1.10
+  - 2.2.5
+  - 2.3.1
   - jruby-9.0.5.0
 
 env:
@@ -19,7 +19,7 @@ matrix:
     - env: RAILS='~> 5.0.0.beta1'
       rvm: 2.0.0
     - env: RAILS='~> 5.0.0.beta1'
-      rvm: 2.1.8
+      rvm: 2.1.10
   allow_failures:
     - env: RAILS='~> 5.0.0.beta1'
       rvm: jruby-9.0.5.0
