@@ -5,7 +5,7 @@ rvm:
   - 2.1.10
   - 2.2.5
   - 2.3.1
-  - jruby-9.0.5.0
+  - jruby-9.1.0.0
 
 env:
   matrix:
@@ -22,4 +22,4 @@ matrix:
       rvm: 2.1.10
   allow_failures:
     - env: RAILS='~> 5.0.0.rc1'
-      rvm: jruby-9.0.5.0
+      rvm: jruby-9.1.0.0
