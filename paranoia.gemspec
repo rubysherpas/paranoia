@@ -8,11 +8,18 @@ Gem::Specification.new do |s|
   s.authors     = ["radarlistener@gmail.com"]
   s.email       = []
   s.homepage    = "http://rubygems.org/gems/paranoia"
-  s.summary     = "Paranoia is a re-implementation of acts_as_paranoid for Rails 3, using much, much, much less code."
-  s.description = "Paranoia is a re-implementation of acts_as_paranoid for Rails 3, using much, much, much less code. You would use either plugin / gem if you wished that when you called destroy on an Active Record object that it didn't actually destroy it, but just \"hid\" the record. Paranoia does this by setting a deleted_at field to the current time when you destroy a record, and hides it by scoping all queries on your model to only include records which do not have a deleted_at field."
+  s.summary     = "Paranoia is a re-implementation of acts_as_paranoid for Rails 3, 4, and 5, using much, much, much less code."
+  s.description = <<-DSC
+    Paranoia is a re-implementation of acts_as_paranoid for Rails 3, 4, and 5,
+    using much, much, much less code. You would use either plugin / gem if you
+    wished that when you called destroy on an Active Record object that it
+    didn't actually destroy it, but just "hid" the record. Paranoia does this
+    by setting a deleted_at field to the current time when you destroy a record,
+    and hides it by scoping all queries on your model to only include records
+    which do not have a deleted_at field.
+  DSC
 
   s.required_rubygems_version = ">= 1.3.6"
-  s.rubyforge_project         = "paranoia"
 
   s.required_ruby_version = '>= 2.0'
 
