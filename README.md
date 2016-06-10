@@ -20,10 +20,16 @@ For Rails 3, please use version 1 of Paranoia:
 gem "paranoia", "~> 1.0"
 ```
 
-For Rails 4 or 5, please use version 2 of Paranoia:
+For Rails 4, please use version 2 of Paranoia:
 
 ``` ruby
 gem "paranoia", "~> 2.0"
+```
+
+For Rails 5, please use the "core" branch of Paranoia:
+
+``` ruby
+gem 'paranoia', github: 'rubysherpas/paranoia', branch: 'core'
 ```
 
 Of course you can install this from GitHub as well:
