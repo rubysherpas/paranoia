@@ -212,8 +212,9 @@ class ActiveRecord::Base
     alias_method :destroy_without_paranoia, :destroy
 
     include Paranoia
-    class_attribute :paranoia_column, :paranoia_sentinel_value
+    class_attribute :paranoia_column, :paranoia_sentinel_value, :paranoid_by_default
 
+    self.paranoid_by_default = !options[:without_default_scope]
     self.paranoia_column = (options[:column] || :deleted_at).to_s
     self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
     def self.paranoia_scope
@@ -221,7 +222,7 @@ class ActiveRecord::Base
     end
     class << self; alias_method :without_deleted, :paranoia_scope end
 
-    unless options[:without_default_scope]
+    if paranoid_by_default
       default_scope { paranoia_scope }
     end
 
@@ -266,6 +267,10 @@ module ActiveRecord
       def build_relation(klass, table, attribute, value)
         relation = super(klass, table, attribute, value)
         return relation unless klass.respond_to?(:paranoia_column)
+
+        add_paranoia_scope = (klass.paranoid_by_default && options[:paranoia] != :with_deleted) || (!klass.paranoid_by_default && options[:paranoia] == :without_deleted)
+        return relation unless add_paranoia_scope
+
         arel_paranoia_scope = klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value)
         if ActiveRecord::VERSION::STRING >= "5.0"
           relation.where(arel_paranoia_scope)

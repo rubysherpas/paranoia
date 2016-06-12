@@ -253,6 +253,24 @@ class ParanoiaTest < test_framework
     refute b.valid?
   end
 
+  def test_uniqueness_with_deleted
+    a = ParanoidWithUniquenessWithDeleted.create!(name: "A")
+    b = ParanoidWithUniquenessWithDeleted.new(name: "A")
+    refute b.valid?
+  end
+
+  def test_uniqueness_without_default_scope_with_deleted
+    a = ParanoidWithoutDefaultScopeWithUniqueness.create!(name: "A")
+    b = ParanoidWithoutDefaultScopeWithUniqueness.new(name: "A")
+    refute b.valid?
+  end
+
+  def test_uniqueness_without_default_scope_without_deleted
+    a = ParanoidWithoutDefaultScopeWithUniquenessWithoutDeleted.create!(name: "A")
+    b = ParanoidWithoutDefaultScopeWithUniquenessWithoutDeleted.new(name: "A")
+    refute b.valid?
+  end
+
   def test_sentinel_value_for_custom_sentinel_models
     model = CustomSentinelModel.new
     assert_equal 0, model.class.count
@@ -1103,6 +1121,24 @@ class ActiveColumnModelWithUniquenessValidation < ActiveRecord::Base
       active: nil
     }
   end
+end
+
+class ParanoidWithUniquenessWithDeleted < ActiveRecord::Base
+  self.table_name = 'featureful_models'
+  acts_as_paranoid
+  validates :name, uniqueness: { paranoia: :with_deleted }
+end
+
+class ParanoidWithoutDefaultScopeWithUniqueness < ActiveRecord::Base
+  self.table_name = 'featureful_models'
+  acts_as_paranoid without_default_scope: true
+  validates :name, uniqueness: true
+end
+
+class ParanoidWithoutDefaultScopeWithUniquenessWithoutDeleted < ActiveRecord::Base
+  self.table_name = 'featureful_models'
+  acts_as_paranoid
+  validates :name, uniqueness: { paranoia: :without_deleted }
 end
 
 class NonParanoidModel < ActiveRecord::Base
