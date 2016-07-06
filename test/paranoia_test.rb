@@ -1094,7 +1094,7 @@ class StatusColumnModel < ActiveRecord::Base
   def paranoia_restore_attributes
     {
       deleted_at: nil,
-      status: 0
+      status: 1
     }
   end
 
