@@ -40,6 +40,7 @@ def setup!
     'unparanoid_unique_models' => 'name VARCHAR(32), paranoid_with_unparanoids_id INTEGER',
     'active_column_models' => 'deleted_at DATETIME, active BOOLEAN',
     'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
+    'status_column_models' => 'deleted_at DATETIME, status INTEGER DEFAULT 0',
     'without_default_scope_models' => 'deleted_at DATETIME'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
@@ -238,6 +239,29 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.unscoped.count
     assert_equal 1, model.class.only_deleted.count
     assert_equal 1, model.class.deleted.count
+  end
+
+  def test_status_column_model
+    model = StatusColumnModel.new(status: 0)
+    assert_equal 0, model.class.count
+    model.save!
+    assert_nil model.deleted_at
+    assert_equal 0, model.status
+    assert_equal 1, model.class.count
+    model.destroy
+
+    assert_equal false, model.deleted_at.nil?
+    assert_equal 2, model.status
+    assert_equal false, model.deleted_at.nil?
+    assert model.paranoia_destroyed?
+
+    assert_equal 0, model.class.count
+    assert_equal 1, model.class.unscoped.count
+    assert_equal 1, model.class.only_deleted.count
+    assert_equal 1, model.class.deleted.count
+
+    model.restore
+    assert_equal 1, model.status
   end
 
   def test_active_column_model_with_uniqueness_validation_only_checks_non_deleted_records
@@ -1062,6 +1086,24 @@ end
 
 class CustomSentinelModel < ActiveRecord::Base
   acts_as_paranoid sentinel_value: DateTime.new(0)
+end
+
+class StatusColumnModel < ActiveRecord::Base
+  acts_as_paranoid column: :status, sentinel_value: [0, 1]
+
+  def paranoia_restore_attributes
+    {
+      deleted_at: nil,
+      status: 0
+    }
+  end
+
+  def paranoia_destroy_attributes
+    {
+      deleted_at: current_time_from_proper_timezone,
+      status: 2
+    }
+  end
 end
 
 class WithoutDefaultScopeModel < ActiveRecord::Base

@@ -36,7 +36,11 @@ module Paranoia
       # these will not match != sentinel value because "NULL != value" is
       # NULL under the sql standard
       quoted_paranoia_column = connection.quote_column_name(paranoia_column)
-      with_deleted.where("#{quoted_paranoia_column} IS NULL OR #{quoted_paranoia_column} != ?", paranoia_sentinel_value)
+      if paranoia_sentinel_value.kind_of?(Array)
+        with_deleted.where("#{quoted_paranoia_column} IS NULL OR #{quoted_paranoia_column} NOT IN (?)", paranoia_sentinel_value)
+      else
+        with_deleted.where("#{quoted_paranoia_column} IS NULL OR #{quoted_paranoia_column} != ?", paranoia_sentinel_value)
+      end
     end
     alias_method :deleted, :only_deleted
 
@@ -121,7 +125,11 @@ module Paranoia
   alias :restore :restore!
 
   def paranoia_destroyed?
-    send(paranoia_column) != paranoia_sentinel_value
+    if paranoia_sentinel_value.kind_of?(Array)
+      !paranoia_sentinel_value.include?(send(paranoia_column))
+    else
+      send(paranoia_column) != paranoia_sentinel_value
+    end
   end
   alias :deleted? :paranoia_destroyed?
 
