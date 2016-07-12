@@ -10,17 +10,16 @@ rvm:
 
 env:
   matrix:
-    - RAILS='~> 4.0.13'
-    - RAILS='~> 4.1.15'
-    - RAILS='~> 4.2.6'
-    - RAILS='~> 5.0.0.rc1'
+    - RAILS='~> 4.1.16'
+    - RAILS='~> 4.2.7'
+    - RAILS='~> 5.0.0'
 
 matrix:
   exclude:
-    - env: RAILS='~> 5.0.0.rc1'
+    - env: RAILS='~> 5.0.0'
       rvm: 2.0.0
-    - env: RAILS='~> 5.0.0.rc1'
+    - env: RAILS='~> 5.0.0'
       rvm: 2.1.10
   allow_failures:
-    - env: RAILS='~> 5.0.0.rc1'
+    - env: RAILS='~> 5.0.0'
       rvm: jruby-9.1.0.0
