@@ -20,24 +20,18 @@ For Rails 3, please use version 1 of Paranoia:
 gem "paranoia", "~> 1.0"
 ```
 
-For Rails 4, please use version 2 of Paranoia:
+For Rails 4 or 5, please use version 2 of Paranoia:
 
 ``` ruby
 gem "paranoia", "~> 2.0"
 ```
 
-For Rails 5, please use the "core" branch of Paranoia:
+Of course you can install this from GitHub as well from one of these examples:
 
 ``` ruby
-gem 'paranoia', github: 'rubysherpas/paranoia', branch: 'core'
-```
-
-Of course you can install this from GitHub as well:
-
-``` ruby
-gem "paranoia", :github => "rubysherpas/paranoia", :branch => "rails3"
-# or
-gem "paranoia", :github => "rubysherpas/paranoia", :branch => "rails4"
+gem "paranoia", github: "rubysherpas/paranoia", branch: "rails3"
+gem "paranoia", github: "rubysherpas/paranoia", branch: "rails4"
+gem "paranoia", github: "rubysherpas/paranoia", branch: "rails5"
 ```
 
 Then run:
@@ -53,7 +47,7 @@ Updating is as simple as `bundle update paranoia`.
 Run:
 
 ``` shell
-rails generate migration AddDeletedAtToClients deleted_at:datetime:index
+bin/rails generate migration AddDeletedAtToClients deleted_at:datetime:index
 ```
 
 and now you have a migration
