@@ -2,7 +2,6 @@ sudo: false
 language: ruby
 cache: bundler
 rvm:
-  - 2.0.0
   - 2.1.10
   - 2.2.5
   - 2.3.1
@@ -17,8 +16,6 @@ env:
 
 matrix:
   exclude:
-    - env: RAILS='~> 5.0.0.rc1'
-      rvm: 2.0.0
     - env: RAILS='~> 5.0.0.rc1'
       rvm: 2.1.10
   allow_failures:
