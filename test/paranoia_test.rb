@@ -489,6 +489,12 @@ class ParanoiaTest < test_framework
     refute ParanoidModel.unscoped.exists?(model.id)
   end
 
+  def test_really_destroy_for_active_column_model
+    model = ActiveColumnModel.create
+    model.really_destroy!
+    refute ActiveColumnModel.unscoped.exists?(model.id)
+  end
+
   def test_real_destroy_dependent_destroy
     parent = ParentModel.create
     child1 = parent.very_related_models.create
