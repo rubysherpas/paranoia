@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.version     = Paranoia::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = %w(radarlistener@gmail.com)
-  s.email       = %w(ben@benmorgan.io)
+  s.email       = %w(ben@benmorgan.io john.hawthorn@gmail.com)
   s.homepage    = "http://rubygems.org/gems/paranoia"
   s.license     = 'MIT'
   s.summary     = "Paranoia is a re-implementation of acts_as_paranoid for Rails 3, 4, and 5, using much, much, much less code."
