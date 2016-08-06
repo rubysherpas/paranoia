@@ -2,6 +2,7 @@ require 'active_record' unless defined? ActiveRecord
 
 module Paranoia
   @@default_sentinel_value = nil
+  @@without = false
 
   # Change default_sentinel_value in a rails initilizer
   def self.default_sentinel_value=(val)
@@ -10,6 +11,20 @@ module Paranoia
 
   def self.default_sentinel_value
     @@default_sentinel_value
+  end
+  
+  def self.without(&block)
+    without!
+    block.call
+    @@without = false
+  end
+  
+  def self.without!
+    @@without = true
+  end
+  
+  def self.without?
+    @@without == true
   end
 
   def self.included(klazz)
@@ -217,7 +232,7 @@ class ActiveRecord::Base
     self.paranoia_column = (options[:column] || :deleted_at).to_s
     self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
     def self.paranoia_scope
-      where(paranoia_column => paranoia_sentinel_value)
+      where(paranoia_column => paranoia_sentinel_value) unless Paranoia.without?
     end
     class << self; alias_method :without_deleted, :paranoia_scope end
 
