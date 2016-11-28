@@ -263,8 +263,8 @@ require 'paranoia/rspec' if defined? RSpec
 module ActiveRecord
   module Validations
     module UniquenessParanoiaValidator
-      def build_relation(klass, table, attribute, value)
-        relation = super(klass, table, attribute, value)
+      def build_relation(klass, *args)
+        relation = super(klass, *args)
         return relation unless klass.respond_to?(:paranoia_column)
         arel_paranoia_scope = klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value)
         if ActiveRecord::VERSION::STRING >= "5.0"
