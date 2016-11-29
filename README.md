@@ -6,7 +6,7 @@ When your app is using Paranoia, calling `destroy` on an ActiveRecord object doe
 
 If you wish to actually destroy an object you may call `really_destroy!`. **WARNING**: This will also *really destroy* all `dependent: :destroy` records, so please aim this method away from face when using.
 
-If a record has `has_many` associations defined AND those associations have `dependent: :destroy` set on them, then they will also be soft-deleted if `acts_as_paranoid` is set,  otherwise the normal destroy will be called.
+If a record has `has_many` associations defined AND those associations have `dependent: :destroy` set on them, then they will also be soft-deleted if `acts_as_paranoid` is set, otherwise the normal destroy will be called. ***See [Destroying through association callbacks](#destroying-through-association-callbacks) for clarifying examples.***
 
 ## Getting Started Video
 Setup and basic usage of the paranoia gem
@@ -243,6 +243,77 @@ class Client < ActiveRecord::Base
     }
   end
 end
+```
+
+##### Destroying through association callbacks
+
+When dealing with `dependent: :destroy` associations and `acts_as_paranoid`, it's important to remember that whatever method is called on the parent model will be called on the child model. For example, given both models of an association have `acts_as_paranoid` defined:
+
+``` ruby
+class Client < ActiveRecord::Base
+  acts_as_paranoid
+
+  has_many :emails, dependent: :destroy
+end
+
+class Email < ActiveRecord::Base
+  acts_as_paranoid
+
+  belongs_to :client
+end
+```
+
+When we call `destroy` on the parent `client`, it will call `destroy` on all of its associated children `emails`:
+
+``` ruby
+>> client.emails.count
+# => 5
+>> client.destroy
+# => client
+>> client.deleted_at
+# => [current timestamp]
+>> Email.where(client_id: client.id).count
+# => 0
+>> Email.with_deleted.where(client_id: client.id).count
+# => 5
+```
+
+Similarly, when we call `really_destroy!` on the parent `client`, then each child `email` will also have `really_destroy!` called:
+
+``` ruby
+>> client.emails.count
+# => 5
+>> client.id
+# => 12345
+>> client.really_destroy!
+# => client
+>> Client.find 12345
+# => ActiveRecord::RecordNotFound
+>> Email.with_deleted.where(client_id: client.id).count
+# => 0
+```
+
+However, if the child model `Email` does not have `acts_as_paranoid` set, then calling `destroy` on the parent `client` will also call `destroy` on each child `email`, thereby actually destroying them:
+
+``` ruby
+class Client < ActiveRecord::Base
+  acts_as_paranoid
+
+  has_many :emails, dependent: :destroy
+end
+
+class Email < ActiveRecord::Base
+  belongs_to :client
+end
+
+>> client.emails.count
+# => 5
+>> client.destroy
+# => client
+>> Email.where(client_id: client.id).count
+# => 0
+>> Email.with_deleted.where(client_id: client.id).count
+# => NoMethodError: undefined method `with_deleted' for #<Class:0x0123456>
 ```
 
 ## Acts As Paranoid Migration
