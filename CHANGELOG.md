@@ -1,6 +1,6 @@
 # paranoia Changelog
 
-## 2.2.0 (unreleased)
+## 2.2.0 (2016-10-21)
 
 * Ruby 2.0 or greater is required
 * Rails 5.0.0.beta1.1 support [@pigeonworks](https://github.com/pigeonworks) [@halostatue](https://github.com/halostatue) and [@gagalago](https://github.com/gagalago)
