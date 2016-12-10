@@ -181,6 +181,30 @@ Client.restore(id, :recursive => true)
 client.restore(:recursive => true)
 ```
 
+If you want to validate uniqueness but want to include deleted records:
+
+``` ruby
+class Client < ActiveRecord::Base
+  acts_as_paranoid
+
+  validates :name, uniqueness: { paranoia: :with_deleted }
+
+  ...
+end
+```
+
+If you don't use the default_scope and want to validate uniqueness but want to exclude deleted records:
+
+``` ruby
+class Client < ActiveRecord::Base
+  acts_as_paranoid without_default_scope: true
+
+  validates :name, uniqueness: { paranoia: :without_deleted }
+
+  ...
+end
+```
+
 For more information, please look at the tests.
 
 #### About indexes:
