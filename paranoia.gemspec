@@ -5,9 +5,10 @@ Gem::Specification.new do |s|
   s.name        = "paranoia"
   s.version     = Paranoia::VERSION
   s.platform    = Gem::Platform::RUBY
-  s.authors     = ["radarlistener@gmail.com"]
-  s.email       = []
-  s.homepage    = "http://rubygems.org/gems/paranoia"
+  s.authors     = %w(radarlistener@gmail.com)
+  s.email       = %w(ben@benmorgan.io john.hawthorn@gmail.com)
+  s.homepage    = "https://github.com/rubysherpas/paranoia"
+  s.license     = 'MIT'
   s.summary     = "Paranoia is a re-implementation of acts_as_paranoid for Rails 3, 4, and 5, using much, much, much less code."
   s.description = <<-DSC
     Paranoia is a re-implementation of acts_as_paranoid for Rails 3, 4, and 5,
