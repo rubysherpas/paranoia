@@ -205,56 +205,58 @@ module Paranoia
   end
 end
 
-class ActiveRecord::Base
-  def self.acts_as_paranoid(options={})
-    alias_method :really_destroyed?, :destroyed?
-    alias_method :really_delete, :delete
-    alias_method :destroy_without_paranoia, :destroy
+ActiveSupport.on_load(:active_record) do
+  class ActiveRecord::Base
+    def self.acts_as_paranoid(options={})
+      alias_method :really_destroyed?, :destroyed?
+      alias_method :really_delete, :delete
+      alias_method :destroy_without_paranoia, :destroy
 
-    include Paranoia
-    class_attribute :paranoia_column, :paranoia_sentinel_value
+      include Paranoia
+      class_attribute :paranoia_column, :paranoia_sentinel_value
 
-    self.paranoia_column = (options[:column] || :deleted_at).to_s
-    self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
-    def self.paranoia_scope
-      where(paranoia_column => paranoia_sentinel_value)
+      self.paranoia_column = (options[:column] || :deleted_at).to_s
+      self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
+      def self.paranoia_scope
+        where(paranoia_column => paranoia_sentinel_value)
+      end
+      class << self; alias_method :without_deleted, :paranoia_scope end
+
+      unless options[:without_default_scope]
+        default_scope { paranoia_scope }
+      end
+
+      before_restore {
+        self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
+      }
+      after_restore {
+        self.class.notify_observers(:after_restore, self) if self.class.respond_to?(:notify_observers)
+      }
     end
-    class << self; alias_method :without_deleted, :paranoia_scope end
 
-    unless options[:without_default_scope]
-      default_scope { paranoia_scope }
-    end
-
-    before_restore {
-      self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
-    }
-    after_restore {
-      self.class.notify_observers(:after_restore, self) if self.class.respond_to?(:notify_observers)
-    }
-  end
-
-  # Please do not use this method in production.
-  # Pretty please.
-  def self.I_AM_THE_DESTROYER!
-    # TODO: actually implement spelling error fixes
+    # Please do not use this method in production.
+    # Pretty please.
+    def self.I_AM_THE_DESTROYER!
+      # TODO: actually implement spelling error fixes
     puts %Q{
       Sharon: "There should be a method called I_AM_THE_DESTROYER!"
       Ryan:   "What should this method do?"
       Sharon: "It should fix all the spelling errors on the page!"
 }
-  end
+    end
 
-  def self.paranoid? ; false ; end
-  def paranoid? ; self.class.paranoid? ; end
+    def self.paranoid? ; false ; end
+    def paranoid? ; self.class.paranoid? ; end
 
-  private
+    private
 
-  def paranoia_column
-    self.class.paranoia_column
-  end
+    def paranoia_column
+      self.class.paranoia_column
+    end
 
-  def paranoia_sentinel_value
-    self.class.paranoia_sentinel_value
+    def paranoia_sentinel_value
+      self.class.paranoia_sentinel_value
+    end
   end
 end
 
