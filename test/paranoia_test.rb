@@ -889,6 +889,22 @@ class ParanoiaTest < test_framework
     assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
   end
 
+  # TODO: it seems impossible to fix double decrement on Rails < 4.2
+  #       because in these versions decrement on destroy
+  #       is being performed in before_destroy callback :(
+  if ActiveRecord::VERSION::STRING >= "4.2"
+    def test_counter_cache_column_update_on_double_destroy
+      parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+      related_model1 = parent_model_with_counter_cache_column.related_models.create
+      related_model2 = parent_model_with_counter_cache_column.related_models.find(related_model1.id)
+
+      assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
+      related_model1.destroy
+      related_model2.destroy
+      assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+    end
+  end
+
   def test_callbacks_for_counter_cache_column_update_on_destroy
     parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
     related_model = parent_model_with_counter_cache_column.related_models.create
