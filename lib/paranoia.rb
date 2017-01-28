@@ -110,7 +110,6 @@ module Paranoia
         if (noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen
           write_attribute paranoia_column, paranoia_sentinel_value
           update_columns(paranoia_restore_attributes)
-          touch
         end
         restore_associated_records if opts[:recursive]
       end
@@ -154,13 +153,17 @@ module Paranoia
   def paranoia_restore_attributes
     {
       paranoia_column => paranoia_sentinel_value
-    }
+    }.merge(timestamp_attributes_with_current_time)
   end
 
   def paranoia_destroy_attributes
     {
       paranoia_column => current_time_from_proper_timezone
-    }
+    }.merge(timestamp_attributes_with_current_time)
+  end
+
+  def timestamp_attributes_with_current_time
+    timestamp_attributes_for_update_in_model.each_with_object({}) { |attr,hash| hash[attr] = current_time_from_proper_timezone }
   end
 
   # restore associated records that have been soft deleted when
