@@ -104,20 +104,32 @@ module Paranoia
   def restore!(opts = {})
     self.class.transaction do
       run_callbacks(:restore) do
+        recovery_window_range = get_recovery_window_range(opts)
         # Fixes a bug where the build would error because attributes were frozen.
         # This only happened on Rails versions earlier than 4.1.
         noop_if_frozen = ActiveRecord.version < Gem::Version.new("4.1")
-        if (noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen
+        if within_recovery_window?(recovery_window_range) && ((noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen)
           write_attribute paranoia_column, paranoia_sentinel_value
           update_columns(paranoia_restore_attributes)
         end
-        restore_associated_records if opts[:recursive]
+        restore_associated_records(recovery_window_range) if opts[:recursive]
       end
     end
 
     self
   end
   alias :restore :restore!
+
+  def get_recovery_window_range(opts)
+    return opts[:recovery_window_range] if opts[:recovery_window_range]
+    return unless opts[:recovery_window]
+    (deleted_at - opts[:recovery_window]..deleted_at + opts[:recovery_window])
+  end
+
+  def within_recovery_window?(recovery_window_range)
+    return true unless recovery_window_range
+    recovery_window_range.cover?(deleted_at)
+  end
 
   def paranoia_destroyed?
     send(paranoia_column) != paranoia_sentinel_value
@@ -168,7 +180,7 @@ module Paranoia
 
   # restore associated records that have been soft deleted when
   # we called #destroy
-  def restore_associated_records
+  def restore_associated_records(recovery_window_range = nil)
     destroyed_associations = self.class.reflect_on_all_associations.select do |association|
       association.options[:dependent] == :destroy
     end
@@ -179,9 +191,11 @@ module Paranoia
       unless association_data.nil?
         if association_data.paranoid?
           if association.collection?
-            association_data.only_deleted.each { |record| record.restore(:recursive => true) }
+            association_data.only_deleted.each do |record|
+              record.restore(:recursive => true, :recovery_window_range => recovery_window_range)
+            end
           else
-            association_data.restore(:recursive => true)
+            association_data.restore(:recursive => true, :recovery_window_range => recovery_window_range)
           end
         end
       end
@@ -199,7 +213,8 @@ module Paranoia
 
         association_class = association_class_name.constantize
         if association_class.paranoid?
-          association_class.only_deleted.where(association_find_conditions).first.try!(:restore, recursive: true)
+          association_class.only_deleted.where(association_find_conditions).first
+            .try!(:restore, recursive: true, :recovery_window_range => recovery_window_range)
         end
       end
     end
