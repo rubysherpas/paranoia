@@ -564,6 +564,38 @@ class ParanoiaTest < test_framework
     refute c.paranoia_destroyed?
   end
 
+  def test_restore_with_associations_using_recovery_window
+    parent = ParentModel.create
+    first_child = parent.very_related_models.create
+    second_child = parent.very_related_models.create
+
+    parent.destroy
+    second_child.update(deleted_at: parent.deleted_at + 11.minutes)
+
+    parent.restore!(:recursive => true)
+    assert_equal true, parent.deleted_at.nil?
+    assert_equal true, first_child.reload.deleted_at.nil?
+    assert_equal true, second_child.reload.deleted_at.nil?
+
+    parent.destroy
+    second_child.update(deleted_at: parent.deleted_at + 11.minutes)
+
+    parent.restore(:recursive => true, :recovery_window => 10.minutes)
+    assert_equal true, parent.deleted_at.nil?
+    assert_equal true, first_child.reload.deleted_at.nil?
+    assert_equal false, second_child.reload.deleted_at.nil?
+
+    second_child.restore
+    parent.destroy
+    first_child.update(deleted_at: parent.deleted_at - 11.minutes)
+    second_child.update(deleted_at: parent.deleted_at - 9.minutes)
+
+    ParentModel.restore(parent.id, :recursive => true, :recovery_window => 10.minutes)
+    assert_equal true, parent.reload.deleted_at.nil?
+    assert_equal false, first_child.reload.deleted_at.nil?
+    assert_equal true, second_child.reload.deleted_at.nil?
+  end
+
   def test_restore_with_associations
     parent = ParentModel.create
     first_child = parent.very_related_models.create
