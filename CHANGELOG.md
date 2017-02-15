@@ -1,5 +1,27 @@
 # paranoia Changelog
 
+## 2.2.2 (Unreleased)
+
+## 2.2.1 (2017-02-15)
+
+* [#371](https://github.com/rubysherpas/paranoia/pull/371) Use ActiveSupport.on_load to correctly re-open ActiveRecord::Base
+
+  _Fixes [#335](https://github.com/rubysherpas/paranoia/issues/335) and [#381](https://github.com/rubysherpas/paranoia/issues/381)._
+
+  [Iaan Krynauw (@iaankrynauw)](https://github.com/iaankrynauw)
+
+* [#377](https://github.com/rubysherpas/paranoia/pull/377) Touch record on paranoia-destroy.
+
+  _Fixes [#296](https://github.com/rubysherpas/paranoia/issues/296)._
+
+  [René (@rbr)](https://github.com/rbr)
+
+* [#379](https://github.com/rubysherpas/paranoia/pull/379) Fixes a problem of ambiguous table names when using only_deleted method.
+
+  _Fixes [#26](https://github.com/rubysherpas/paranoia/issues/26) and [#27](https://github.com/rubysherpas/paranoia/pull/27)._
+
+  [Thomas Romera (@Erowlin)](https://github.com/Erowlin)
+
 ## 2.2.0 (2016-10-21)
 
 * Ruby 2.0 or greater is required
