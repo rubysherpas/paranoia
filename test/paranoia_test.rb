@@ -40,6 +40,8 @@ def setup!
     'unparanoid_unique_models' => 'name VARCHAR(32), paranoid_with_unparanoids_id INTEGER',
     'active_column_models' => 'deleted_at DATETIME, active BOOLEAN',
     'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
+    'paranoid_model_with_belongs_to_active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN, active_column_model_with_has_many_relationship_id INTEGER',
+    'active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN', 
     'without_default_scope_models' => 'deleted_at DATETIME'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
@@ -182,14 +184,28 @@ class ParanoiaTest < test_framework
     p2 = ParanoidModel.create(:parent_model => parent2)
     p1.destroy
     p2.destroy
+    
     assert_equal 0, parent1.paranoid_models.count
     assert_equal 1, parent1.paranoid_models.only_deleted.count
+
+    assert_equal 2, ParanoidModel.only_deleted.joins(:parent_model).count    
     assert_equal 1, parent1.paranoid_models.deleted.count
     assert_equal 0, parent1.paranoid_models.without_deleted.count
     p3 = ParanoidModel.create(:parent_model => parent1)
     assert_equal 2, parent1.paranoid_models.with_deleted.count
     assert_equal 1, parent1.paranoid_models.without_deleted.count
     assert_equal [p1,p3], parent1.paranoid_models.with_deleted
+  end
+
+  def test_only_deleted_with_joins
+    c1 = ActiveColumnModelWithHasManyRelationship.create(name: 'Jacky')
+    c2 = ActiveColumnModelWithHasManyRelationship.create(name: 'Thomas')
+    p1 = ParanoidModelWithBelongsToActiveColumnModelWithHasManyRelationship.create(name: 'Hello', active_column_model_with_has_many_relationship: c1)
+    
+    c1.destroy
+    assert_equal 1, ActiveColumnModelWithHasManyRelationship.count
+    assert_equal 1, ActiveColumnModelWithHasManyRelationship.only_deleted.count
+    assert_equal 1, ActiveColumnModelWithHasManyRelationship.only_deleted.joins(:paranoid_model_with_belongs_to_active_column_model_with_has_many_relationships).count
   end
 
   def test_destroy_behavior_for_custom_column_models
@@ -1127,6 +1143,45 @@ end
 
 class ActiveColumnModelWithUniquenessValidation < ActiveRecord::Base
   validates :name, :uniqueness => true
+  acts_as_paranoid column: :active, sentinel_value: true
+
+  def paranoia_restore_attributes
+    {
+      deleted_at: nil,
+      active: true
+    }
+  end
+
+  def paranoia_destroy_attributes
+    {
+      deleted_at: current_time_from_proper_timezone,
+      active: nil
+    }
+  end
+end
+
+class ActiveColumnModelWithHasManyRelationship < ActiveRecord::Base
+  has_many :paranoid_model_with_belongs_to_active_column_model_with_has_many_relationships
+  acts_as_paranoid column: :active, sentinel_value: true
+
+  def paranoia_restore_attributes
+    {
+      deleted_at: nil,
+      active: true
+    }
+  end
+
+  def paranoia_destroy_attributes
+    {
+      deleted_at: current_time_from_proper_timezone,
+      active: nil
+    }
+  end
+end
+
+class ParanoidModelWithBelongsToActiveColumnModelWithHasManyRelationship < ActiveRecord::Base
+  belongs_to :active_column_model_with_has_many_relationship
+
   acts_as_paranoid column: :active, sentinel_value: true
 
   def paranoia_restore_attributes
