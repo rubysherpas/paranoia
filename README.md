@@ -181,6 +181,14 @@ Client.restore(id, :recursive => true)
 client.restore(:recursive => true)
 ```
 
+If you want to restore a record and only those dependently destroyed associated records that were deleted within 2 minutes of the object upon which they depend:
+
+``` ruby
+Client.restore(id, :recursive => true. :recovery_window => 2.minutes)
+# or
+client.restore(:recursive => true, :recovery_window => 2.minutes)
+```
+
 For more information, please look at the tests.
 
 #### About indexes:
