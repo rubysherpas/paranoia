@@ -46,7 +46,7 @@ def setup!
     'active_column_models' => 'deleted_at DATETIME, active BOOLEAN',
     'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
     'paranoid_model_with_belongs_to_active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN, active_column_model_with_has_many_relationship_id INTEGER',
-    'active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN', 
+    'active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
     'without_default_scope_models' => 'deleted_at DATETIME'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
@@ -204,11 +204,11 @@ class ParanoiaTest < test_framework
     p2 = ParanoidModel.create(:parent_model => parent2)
     p1.destroy
     p2.destroy
-    
+
     assert_equal 0, parent1.paranoid_models.count
     assert_equal 1, parent1.paranoid_models.only_deleted.count
 
-    assert_equal 2, ParanoidModel.only_deleted.joins(:parent_model).count    
+    assert_equal 2, ParanoidModel.only_deleted.joins(:parent_model).count
     assert_equal 1, parent1.paranoid_models.deleted.count
     assert_equal 0, parent1.paranoid_models.without_deleted.count
     p3 = ParanoidModel.create(:parent_model => parent1)
@@ -221,7 +221,7 @@ class ParanoiaTest < test_framework
     c1 = ActiveColumnModelWithHasManyRelationship.create(name: 'Jacky')
     c2 = ActiveColumnModelWithHasManyRelationship.create(name: 'Thomas')
     p1 = ParanoidModelWithBelongsToActiveColumnModelWithHasManyRelationship.create(name: 'Hello', active_column_model_with_has_many_relationship: c1)
-    
+
     c1.destroy
     assert_equal 1, ActiveColumnModelWithHasManyRelationship.count
     assert_equal 1, ActiveColumnModelWithHasManyRelationship.only_deleted.count
@@ -1004,6 +1004,15 @@ class ParanoiaTest < test_framework
     assert notParanoidModel.errors.full_messages.include? "Parent model has been soft-deleted"
   end
 
+  def test_collection_for_edit_with_default_symbol_returns_deleted_parent
+    parent = ParentModel.create
+    child = parent.very_related_models.create
+    parent.destroy
+
+    assert_equal 1, child.parent_models_for_edit.size
+    assert_equal [parent], child.parent_models_for_edit
+  end
+
   # TODO: find a fix for Rails 4.1
   if ActiveRecord::VERSION::STRING !~ /\A4\.1/
     def test_counter_cache_column_update_on_really_destroy
@@ -1155,6 +1164,7 @@ class RelatedModel < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :parent_model
   belongs_to :parent_model_with_counter_cache_column, counter_cache: true
+  collection_for_edit :parent_model
 
   after_destroy do |model|
     if parent_model_with_counter_cache_column && parent_model_with_counter_cache_column.reload.related_models_count == 0

@@ -337,6 +337,30 @@ end
 # => NoMethodError: undefined method `with_deleted' for #<Class:0x0123456>
 ```
 
+## Using soft-deleted objects in forms
+
+In many cases where you are using this gem, and you have a UI, you might encounter scenarios where the parent object is soft-deleted, but the end-user is trying to edit a child record. In such cases, it seems logical that the end-user is shown the related parents drop-down with the deleted parent as one of the options (as opposed to not showing that selection at all). And, for the cases where the specific record of the associated object should not be shown (when that record has been soft-deleted) - for eg when creating the child record via a UI, you can use the following helper method:
+
+``` ruby
+  # Example:
+  class User < ActiveRecord::Base
+    belongs_to :role
+    collection_for_edit :role
+  end
+```
+
+If the class defines a scope with a custom name, then that can be passed in with the options hash with the key 'name_prefix' like so:
+
+``` ruby
+  class Store < ActiveRecord::Base
+    belongs_to :sales_person, class_name: User.to_s
+    collection_for_edit :sales_person, nil, name_prefix: :salesmen
+    collection_for_edit :sales_person, -> { User.salesmen }, name_prefix: :salesmen   # This is equivalent to the above
+  end
+```
+
+The method will evaluate the scope_block if specified to get all the values for the edit dropdown. If the scope_block is nil, the method will try to deduce it from the association. Again, if there is a scope defined for the association class with the same name as option 'name_prefix' or the pluralized version of the associated symbol, then that will be used to fetch all records for the dropdown
+
 ## Acts As Paranoid Migration
 
 You can replace the older `acts_as_paranoid` methods as follows:
