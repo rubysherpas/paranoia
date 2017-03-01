@@ -52,7 +52,7 @@
 
 * `#destroyed?` is no longer overridden. Use `#paranoia_destroyed?` for the existing behaviour. [Washington Luiz](https://github.com/huoxito)
 * `#persisted?` is no longer overridden.
-* ActiveRecord 4.0 no longer has `#destroy!` as an alias for `#really_destroy`.
+* ActiveRecord 4.0 no longer has `#destroy!` as an alias for `#really_destroy!`.
 * `#destroy` will now raise an exception if called on a readonly record.
 * `#destroy` on a hard deleted record is now a successful noop.
 * `#destroy` on a new record will set deleted_at (previously this raised an error)
@@ -60,7 +60,7 @@
 
 ### Bug Fixes
 
-* Calling `#destroy` twice will not hard-delete records. Use `#really_destroy` if this is desired.
+* Calling `#destroy` twice will not hard-delete records. Use `#really_destroy!` if this is desired.
 * Fix errors on non-paranoid has_one dependent associations
 
 ## 2.0.5 (2015-01-22)
