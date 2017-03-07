@@ -118,9 +118,9 @@ class ParanoiaTest < test_framework
     model.remove_called_variables     # clear called callback flags
     model.destroy
 
-    assert_equal nil, model.instance_variable_get(:@update_callback_called)
-    assert_equal nil, model.instance_variable_get(:@save_callback_called)
-    assert_equal nil, model.instance_variable_get(:@validate_called)
+    assert_nil model.instance_variable_get(:@update_callback_called)
+    assert_nil model.instance_variable_get(:@save_callback_called)
+    assert_nil model.instance_variable_get(:@validate_called)
 
     assert model.instance_variable_get(:@destroy_callback_called)
     assert model.instance_variable_get(:@after_destroy_callback_called)
@@ -134,12 +134,12 @@ class ParanoiaTest < test_framework
     model.remove_called_variables     # clear called callback flags
     model.delete
 
-    assert_equal nil, model.instance_variable_get(:@update_callback_called)
-    assert_equal nil, model.instance_variable_get(:@save_callback_called)
-    assert_equal nil, model.instance_variable_get(:@validate_called)
-    assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
-    assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
-    assert_equal nil, model.instance_variable_get(:@after_commit_callback_called)
+    assert_nil model.instance_variable_get(:@update_callback_called)
+    assert_nil model.instance_variable_get(:@save_callback_called)
+    assert_nil model.instance_variable_get(:@validate_called)
+    assert_nil model.instance_variable_get(:@destroy_callback_called)
+    assert_nil model.instance_variable_get(:@after_destroy_callback_called)
+    assert_nil model.instance_variable_get(:@after_commit_callback_called)
   end
 
   def test_delete_in_transaction_behavior_for_plain_models_callbacks
@@ -150,11 +150,11 @@ class ParanoiaTest < test_framework
       model.delete
     end
 
-    assert_equal nil, model.instance_variable_get(:@update_callback_called)
-    assert_equal nil, model.instance_variable_get(:@save_callback_called)
-    assert_equal nil, model.instance_variable_get(:@validate_called)
-    assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
-    assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
+    assert_nil model.instance_variable_get(:@update_callback_called)
+    assert_nil model.instance_variable_get(:@save_callback_called)
+    assert_nil model.instance_variable_get(:@validate_called)
+    assert_nil model.instance_variable_get(:@destroy_callback_called)
+    assert_nil model.instance_variable_get(:@after_destroy_callback_called)
     assert model.instance_variable_get(:@after_commit_callback_called)
   end
 
@@ -227,7 +227,7 @@ class ParanoiaTest < test_framework
   end
 
   def test_default_sentinel_value
-    assert_equal nil, ParanoidModel.paranoia_sentinel_value
+    assert_nil ParanoidModel.paranoia_sentinel_value
   end
 
   def test_without_default_scope_option
@@ -376,7 +376,7 @@ class ParanoiaTest < test_framework
     model = CallbackModel.new
     model.save
     model.delete
-    assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
+    assert_nil model.instance_variable_get(:@destroy_callback_called)
   end
 
   def test_destroy_behavior_for_callbacks
@@ -949,8 +949,8 @@ class ParanoiaTest < test_framework
     parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
     related_model = parent_model_with_counter_cache_column.related_models.create
 
-    assert_equal nil, related_model.instance_variable_get(:@after_destroy_callback_called)
-    assert_equal nil, related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+    assert_nil related_model.instance_variable_get(:@after_destroy_callback_called)
+    assert_nil related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
 
     related_model.destroy
 
@@ -995,8 +995,8 @@ class ParanoiaTest < test_framework
       parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
       related_model = parent_model_with_counter_cache_column.related_models.create
 
-      assert_equal nil, related_model.instance_variable_get(:@after_destroy_callback_called)
-      assert_equal nil, related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+      assert_nil related_model.instance_variable_get(:@after_destroy_callback_called)
+      assert_nil related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
 
       related_model.really_destroy!
 
