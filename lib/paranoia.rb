@@ -299,5 +299,14 @@ module ActiveRecord
     class UniquenessValidator < ActiveModel::EachValidator
       prepend UniquenessParanoiaValidator
     end
+    
+    class AssociationNotSoftDestroyedValidator < ActiveModel::EachValidator
+      def validate_each(record, attribute, value)
+        # if association is soft destroyed, add an error
+        if value.present? && value.deleted?
+          record.errors[attribute] << 'has been soft-deleted'
+        end
+      end
+    end
   end
 end
