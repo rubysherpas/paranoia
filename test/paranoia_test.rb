@@ -21,6 +21,7 @@ def setup!
     'paranoid_model_with_foreign_key_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, has_one_foreign_key_id INTEGER',
     'paranoid_model_with_timestamps' => 'parent_model_id INTEGER, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME',
     'not_paranoid_model_with_belongs' => 'parent_model_id INTEGER, paranoid_model_with_has_one_id INTEGER',
+    'not_paranoid_model_with_belongs_and_assocation_not_soft_destroyed_validator' => 'parent_model_id INTEGER, paranoid_model_with_has_one_id INTEGER',
     'paranoid_model_with_has_one_and_builds' => 'parent_model_id INTEGER, color VARCHAR(32), deleted_at DATETIME, has_one_foreign_key_id INTEGER',
     'featureful_models' => 'deleted_at DATETIME, name VARCHAR(32)',
     'plain_models' => 'deleted_at DATETIME',
@@ -964,6 +965,18 @@ class ParanoiaTest < test_framework
     related.valid?
   end
 
+  def test_assocation_not_soft_destroyed_validator
+    notParanoidModel = NotParanoidModelWithBelongsAndAssocationNotSoftDestroyedValidator.create
+    parentModel = ParentModel.create
+    assert notParanoidModel.valid?
+
+    notParanoidModel.parent_model = parentModel
+    assert notParanoidModel.valid?
+    parentModel.destroy
+    assert !notParanoidModel.valid?
+    assert notParanoidModel.errors.full_messages.include? "Parent model has been soft-deleted"
+  end
+
   # TODO: find a fix for Rails 4.1
   if ActiveRecord::VERSION::STRING !~ /\A4\.1/
     def test_counter_cache_column_update_on_really_destroy
@@ -1264,6 +1277,12 @@ end
 class NotParanoidModelWithBelong < ActiveRecord::Base
   belongs_to :paranoid_model_with_has_one
 end
+
+class NotParanoidModelWithBelongsAndAssocationNotSoftDestroyedValidator < NotParanoidModelWithBelong
+    belongs_to :parent_model
+    validates :parent_model, association_not_soft_destroyed: true
+end
+
 
 class FlaggedModel < PlainModel
   acts_as_paranoid :flag_column => :is_deleted
