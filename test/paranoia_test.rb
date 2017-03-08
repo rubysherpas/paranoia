@@ -1283,7 +1283,6 @@ class NotParanoidModelWithBelongsAndAssocationNotSoftDestroyedValidator < NotPar
     validates :parent_model, association_not_soft_destroyed: true
 end
 
-
 class FlaggedModel < PlainModel
   acts_as_paranoid :flag_column => :is_deleted
 end
