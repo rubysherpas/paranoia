@@ -189,6 +189,13 @@ Client.restore(id, :recursive => true. :recovery_window => 2.minutes)
 client.restore(:recursive => true, :recovery_window => 2.minutes)
 ```
 
+Note that by default paranoia will not prevent that a soft destroyed object can't be associated with another object of a different model.
+A Rails validator is provided should you require this functionality:
+  ``` ruby
+validates :some_assocation, association_not_soft_destroyed: true
+```
+This validator makes sure that `some_assocation` is not soft destroyed. If the object is soft destroyed the main object is rendered invalid and an validation error is added.
+
 For more information, please look at the tests.
 
 #### About indexes:

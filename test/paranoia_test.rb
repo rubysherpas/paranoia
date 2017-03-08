@@ -21,6 +21,7 @@ def setup!
     'paranoid_model_with_foreign_key_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, has_one_foreign_key_id INTEGER',
     'paranoid_model_with_timestamps' => 'parent_model_id INTEGER, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME',
     'not_paranoid_model_with_belongs' => 'parent_model_id INTEGER, paranoid_model_with_has_one_id INTEGER',
+    'not_paranoid_model_with_belongs_and_assocation_not_soft_destroyed_validator' => 'parent_model_id INTEGER, paranoid_model_with_has_one_id INTEGER',
     'paranoid_model_with_has_one_and_builds' => 'parent_model_id INTEGER, color VARCHAR(32), deleted_at DATETIME, has_one_foreign_key_id INTEGER',
     'featureful_models' => 'deleted_at DATETIME, name VARCHAR(32)',
     'plain_models' => 'deleted_at DATETIME',
@@ -117,9 +118,9 @@ class ParanoiaTest < test_framework
     model.remove_called_variables     # clear called callback flags
     model.destroy
 
-    assert_equal nil, model.instance_variable_get(:@update_callback_called)
-    assert_equal nil, model.instance_variable_get(:@save_callback_called)
-    assert_equal nil, model.instance_variable_get(:@validate_called)
+    assert_nil model.instance_variable_get(:@update_callback_called)
+    assert_nil model.instance_variable_get(:@save_callback_called)
+    assert_nil model.instance_variable_get(:@validate_called)
 
     assert model.instance_variable_get(:@destroy_callback_called)
     assert model.instance_variable_get(:@after_destroy_callback_called)
@@ -133,12 +134,12 @@ class ParanoiaTest < test_framework
     model.remove_called_variables     # clear called callback flags
     model.delete
 
-    assert_equal nil, model.instance_variable_get(:@update_callback_called)
-    assert_equal nil, model.instance_variable_get(:@save_callback_called)
-    assert_equal nil, model.instance_variable_get(:@validate_called)
-    assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
-    assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
-    assert_equal nil, model.instance_variable_get(:@after_commit_callback_called)
+    assert_nil model.instance_variable_get(:@update_callback_called)
+    assert_nil model.instance_variable_get(:@save_callback_called)
+    assert_nil model.instance_variable_get(:@validate_called)
+    assert_nil model.instance_variable_get(:@destroy_callback_called)
+    assert_nil model.instance_variable_get(:@after_destroy_callback_called)
+    assert_nil model.instance_variable_get(:@after_commit_callback_called)
   end
 
   def test_delete_in_transaction_behavior_for_plain_models_callbacks
@@ -149,11 +150,11 @@ class ParanoiaTest < test_framework
       model.delete
     end
 
-    assert_equal nil, model.instance_variable_get(:@update_callback_called)
-    assert_equal nil, model.instance_variable_get(:@save_callback_called)
-    assert_equal nil, model.instance_variable_get(:@validate_called)
-    assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
-    assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
+    assert_nil model.instance_variable_get(:@update_callback_called)
+    assert_nil model.instance_variable_get(:@save_callback_called)
+    assert_nil model.instance_variable_get(:@validate_called)
+    assert_nil model.instance_variable_get(:@destroy_callback_called)
+    assert_nil model.instance_variable_get(:@after_destroy_callback_called)
     assert model.instance_variable_get(:@after_commit_callback_called)
   end
 
@@ -226,7 +227,7 @@ class ParanoiaTest < test_framework
   end
 
   def test_default_sentinel_value
-    assert_equal nil, ParanoidModel.paranoia_sentinel_value
+    assert_nil ParanoidModel.paranoia_sentinel_value
   end
 
   def test_without_default_scope_option
@@ -375,7 +376,7 @@ class ParanoiaTest < test_framework
     model = CallbackModel.new
     model.save
     model.delete
-    assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
+    assert_nil model.instance_variable_get(:@destroy_callback_called)
   end
 
   def test_destroy_behavior_for_callbacks
@@ -948,8 +949,8 @@ class ParanoiaTest < test_framework
     parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
     related_model = parent_model_with_counter_cache_column.related_models.create
 
-    assert_equal nil, related_model.instance_variable_get(:@after_destroy_callback_called)
-    assert_equal nil, related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+    assert_nil related_model.instance_variable_get(:@after_destroy_callback_called)
+    assert_nil related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
 
     related_model.destroy
 
@@ -962,6 +963,18 @@ class ParanoiaTest < test_framework
     related = parent_model.unparanoid_unique_models.create
     # will raise exception if model is not checked for paranoia
     related.valid?
+  end
+
+  def test_assocation_not_soft_destroyed_validator
+    notParanoidModel = NotParanoidModelWithBelongsAndAssocationNotSoftDestroyedValidator.create
+    parentModel = ParentModel.create
+    assert notParanoidModel.valid?
+
+    notParanoidModel.parent_model = parentModel
+    assert notParanoidModel.valid?
+    parentModel.destroy
+    assert !notParanoidModel.valid?
+    assert notParanoidModel.errors.full_messages.include? "Parent model has been soft-deleted"
   end
 
   # TODO: find a fix for Rails 4.1
@@ -982,8 +995,8 @@ class ParanoiaTest < test_framework
       parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
       related_model = parent_model_with_counter_cache_column.related_models.create
 
-      assert_equal nil, related_model.instance_variable_get(:@after_destroy_callback_called)
-      assert_equal nil, related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+      assert_nil related_model.instance_variable_get(:@after_destroy_callback_called)
+      assert_nil related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
 
       related_model.really_destroy!
 
@@ -1263,6 +1276,11 @@ end
 
 class NotParanoidModelWithBelong < ActiveRecord::Base
   belongs_to :paranoid_model_with_has_one
+end
+
+class NotParanoidModelWithBelongsAndAssocationNotSoftDestroyedValidator < NotParanoidModelWithBelong
+    belongs_to :parent_model
+    validates :parent_model, association_not_soft_destroyed: true
 end
 
 class FlaggedModel < PlainModel

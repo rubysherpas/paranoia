@@ -2,6 +2,12 @@
 
 ## 2.2.2 (Unreleased)
 
+* [#389](https://github.com/rubysherpas/paranoia/pull/389) Added association not soft destroyed validator
+
+  _Fixes [#380](https://github.com/rubysherpas/paranoia/issues/380)_
+
+  [Edward Poot (@edwardmp)](https://github.com/edwardmp)
+
 ## 2.2.1 (2017-02-15)
 
 * [#371](https://github.com/rubysherpas/paranoia/pull/371) Use ActiveSupport.on_load to correctly re-open ActiveRecord::Base
