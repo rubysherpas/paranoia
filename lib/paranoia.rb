@@ -76,6 +76,7 @@ module Paranoia
   def destroy
     transaction do
       run_callbacks(:destroy) do
+        @_disable_counter_cache = deleted?
         result = delete
         next result unless result && ActiveRecord::VERSION::STRING >= '4.2'
         each_counter_cached_associations do |association|
@@ -84,6 +85,7 @@ module Paranoia
           next unless send(association.reflection.name)
           association.decrement_counters
         end
+        @_disable_counter_cache = false
         result
       end
     end
@@ -110,8 +112,15 @@ module Paranoia
         # This only happened on Rails versions earlier than 4.1.
         noop_if_frozen = ActiveRecord.version < Gem::Version.new("4.1")
         if within_recovery_window?(recovery_window_range) && ((noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen)
+          @_disable_counter_cache = !deleted?
           write_attribute paranoia_column, paranoia_sentinel_value
           update_columns(paranoia_restore_attributes)
+          each_counter_cached_associations do |association|
+            if send(association.reflection.name)
+              association.increment_counters
+            end
+          end
+          @_disable_counter_cache = false
         end
         restore_associated_records(recovery_window_range) if opts[:recursive]
       end
@@ -140,6 +149,7 @@ module Paranoia
   def really_destroy!
     transaction do
       run_callbacks(:real_destroy) do
+        @_disable_counter_cache = deleted?
         dependent_reflections = self.class.reflections.select do |name, reflection|
           reflection.options[:dependent] == :destroy
         end
@@ -162,6 +172,10 @@ module Paranoia
   end
 
   private
+
+  def each_counter_cached_associations
+    !@_disable_counter_cache && defined?(super) ? super : []
+  end
 
   def paranoia_restore_attributes
     {

@@ -1003,6 +1003,44 @@ class ParanoiaTest < test_framework
       assert related_model.instance_variable_get(:@after_destroy_callback_called)
       assert related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
     end
+
+    def test_counter_cache_column_on_double_destroy
+      parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+      related_model = parent_model_with_counter_cache_column.related_models.create
+
+      related_model.destroy
+      related_model.destroy
+      assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+    end
+
+    def test_counter_cache_column_on_double_restore
+      parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+      related_model = parent_model_with_counter_cache_column.related_models.create
+
+      related_model.destroy
+      related_model.restore
+      related_model.restore
+      assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
+    end
+
+    def test_counter_cache_column_on_destroy_and_really_destroy
+      parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+      related_model = parent_model_with_counter_cache_column.related_models.create
+
+      related_model.destroy
+      related_model.really_destroy!
+      assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+    end
+
+    def test_counter_cache_column_on_restore
+      parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+      related_model = parent_model_with_counter_cache_column.related_models.create
+
+      related_model.destroy
+      assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+      related_model.restore
+      assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
+    end
   end
 
   private
