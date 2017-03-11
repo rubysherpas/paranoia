@@ -234,7 +234,7 @@ module Paranoia
   end
 end
 
-require 'paranoia_helper'
+require 'association_helper'
 
 ActiveSupport.on_load(:active_record) do
   class ActiveRecord::Base
@@ -246,7 +246,7 @@ ActiveSupport.on_load(:active_record) do
       alias_method :destroy_without_paranoia, :destroy
 
       include Paranoia
-      include ParanoiaHelper
+      include AssociationHelper
       class_attribute :paranoia_column, :paranoia_sentinel_value
 
       self.paranoia_column = (options[:column] || :deleted_at).to_s

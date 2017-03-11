@@ -1,5 +1,5 @@
 # frozen_string_literal: true
-module ParanoiaHelper
+module AssociationHelper
   def self.included(klazz)
     klazz.extend QueryAssociations
   end
