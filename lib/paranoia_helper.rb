@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 module ParanoiaHelper
-  extend ActiveSupport::Concern
+  def self.included(klazz)
+    klazz.extend QueryAssociations
+  end
 
-  module ClassMethods
+  module QueryAssociations
     private
 
     # This method generates an instance method with the name: associated_sym.to_s.pluralize.
