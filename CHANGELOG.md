@@ -1,12 +1,31 @@
 # paranoia Changelog
 
-## 2.2.2 (Unreleased)
+## 2.3.0 (2017-04-14)
+
+* [#393](https://github.com/rubysherpas/paranoia/pull/393) Drop support for Rails 4.1 and begin supporting Rails 5.1.
+
+  [Miklós Fazekas (@mfazekas)](https://github.com/mfazekas)
+
+* [#391](https://github.com/rubysherpas/paranoia/pull/391) Use Contributor Covenant Version 1.4
+
+  [Ben A. Morgan (@BenMorganIO)](https://github.com/BenMorganIO)
+
+* [#390](https://github.com/rubysherpas/paranoia/pull/390) Fix counter cache with double destroy, really_destroy, and restore
+
+  [Chris Oliver (@excid3)](https://github.com/excid3)
 
 * [#389](https://github.com/rubysherpas/paranoia/pull/389) Added association not soft destroyed validator
 
   _Fixes [#380](https://github.com/rubysherpas/paranoia/issues/380)_
 
   [Edward Poot (@edwardmp)](https://github.com/edwardmp)
+
+* [#383](https://github.com/rubysherpas/paranoia/pull/383) Add recovery window feature
+
+  _Fixes [#359](https://github.com/rubysherpas/paranoia/issues/359)_
+
+  [Andrzej Piątyszek (@konto-andrzeja)](https://github.com/konto-andrzeja)
+
 
 ## 2.2.1 (2017-02-15)
 
