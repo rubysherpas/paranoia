@@ -1,5 +1,9 @@
 # paranoia Changelog
 
+## 2.3.1
+
+* [#397](https://github.com/rubysherpas/paranoia/pull/397) Bump active record max version to support 5.1 final
+
 ## 2.3.0 (2017-04-14)
 
 * [#393](https://github.com/rubysherpas/paranoia/pull/393) Drop support for Rails 4.1 and begin supporting Rails 5.1.
