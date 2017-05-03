@@ -115,6 +115,16 @@ class ParanoiaTest < test_framework
     assert_equal 0, model.class.unscoped.count
   end
 
+  def test_after_commit_on_destroy_callbacks
+    model = AfterCommitDestroyModel.new
+    model.save
+    model.reset_after_commit_callback_called     # clear called callback flags
+    refute model.after_commit_callback_called
+    model.destroy
+
+    assert model.after_commit_callback_called
+  end
+
   # Anti-regression test for #81, which would've introduced a bug to break this test.
   def test_destroy_behavior_for_plain_models_callbacks
     model = CallbackModel.new
@@ -1369,5 +1379,24 @@ module Namespaced
   class ParanoidBelongsTo < ActiveRecord::Base
     acts_as_paranoid
     belongs_to :paranoid_has_one
+  end
+end
+
+class AfterCommitDestroyModel < ActiveRecord::Base
+  self.table_name = "callback_models"
+
+  attr_reader :after_commit_callback_called
+
+  acts_as_paranoid
+  after_commit :callback_triggered, on: :destroy
+
+  def reset_after_commit_callback_called
+    @after_commit_callback_called = false
+  end
+
+  private
+
+  def callback_triggered
+    @after_commit_callback_called = true
   end
 end
