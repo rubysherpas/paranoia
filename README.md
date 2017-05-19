@@ -123,16 +123,6 @@ def product
 end
 ```
 
-If you want to include associated soft-deleted objects, you can (un)scope the association:
-
-``` ruby
-class Person < ActiveRecord::Base
-  belongs_to :group, -> { with_deleted }
-end
-
-Person.includes(:group).all
-```
-
 If you want to find all records, even those which are deleted:
 
 ``` ruby
