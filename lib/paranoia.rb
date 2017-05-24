@@ -271,11 +271,11 @@ ActiveSupport.on_load(:active_record) do
     # Pretty please.
     def self.I_AM_THE_DESTROYER!
       # TODO: actually implement spelling error fixes
-    puts %Q{
-      Sharon: "There should be a method called I_AM_THE_DESTROYER!"
-      Ryan:   "What should this method do?"
-      Sharon: "It should fix all the spelling errors on the page!"
-}
+      puts %Q{
+        Sharon: "There should be a method called I_AM_THE_DESTROYER!"
+        Ryan:   "What should this method do?"
+        Sharon: "It should fix all the spelling errors on the page!"
+      }
     end
 
     def self.paranoid? ; false ; end
@@ -313,7 +313,7 @@ module ActiveRecord
     class UniquenessValidator < ActiveModel::EachValidator
       prepend UniquenessParanoiaValidator
     end
-    
+
     class AssociationNotSoftDestroyedValidator < ActiveModel::EachValidator
       def validate_each(record, attribute, value)
         # if association is soft destroyed, add an error
