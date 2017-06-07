@@ -21,10 +21,13 @@ module Paranoia
     def paranoid? ; true ; end
 
     def with_deleted
-      if ActiveRecord::VERSION::STRING >= "4.1"
-        return unscope where: paranoia_column
+      if block_given?
+        unscoped { yield }
+      elsif ActiveRecord::VERSION::STRING >= "4.1"
+        unscope where: paranoia_column
+      else
+        all.tap { |x| x.default_scoped = false }
       end
-      all.tap { |x| x.default_scoped = false }
     end
 
     def only_deleted
@@ -313,7 +316,7 @@ module ActiveRecord
     class UniquenessValidator < ActiveModel::EachValidator
       prepend UniquenessParanoiaValidator
     end
-    
+
     class AssociationNotSoftDestroyedValidator < ActiveModel::EachValidator
       def validate_each(record, attribute, value)
         # if association is soft destroyed, add an error
