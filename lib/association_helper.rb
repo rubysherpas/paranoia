@@ -29,10 +29,11 @@ module AssociationHelper
     # records for the dropdown
     #
     def collection_for_edit(associated_sym, scope_block = nil, options = {})
-      scope_name = (options[:name_prefix] || associated_sym.to_s.pluralize).to_s.to_sym
+      scope_name = derive_scope_name(associated_sym, options)
       method_name = "#{scope_name}_for_edit".to_sym
+      return if instance_methods(false).include?(method_name)
+
       define_method method_name do
-        associated_model = send(associated_sym)
         all_records = case scope_block
                       when nil
                         association_class = self.class.reflect_on_association(associated_sym).class_name.constantize
@@ -40,8 +41,14 @@ module AssociationHelper
                       else
                         scope_block.call
                       end
+        # TODO: This might be optimizable if we can push the inclusion into the db itself
+        associated_model = send(associated_sym)
         associated_model.present? && associated_model.deleted? ? [associated_model] + all_records.to_a : all_records.to_a
-      end unless instance_methods(false).include?(method_name)
+      end
+    end
+
+    def derive_scope_name(associated_sym, options)
+      (options[:name_prefix] || associated_sym.to_s.pluralize).to_s.to_sym
     end
   end
 end
