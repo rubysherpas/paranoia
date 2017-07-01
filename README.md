@@ -349,12 +349,14 @@ In many cases where you are using this gem, and you have a UI, you might encount
   end
 ```
 
+In the above example, the user form should use the instance method `roles_for_edit` to populate the role drop-down.
+
 If the class defines a scope with a custom name, then that can be passed in with the options hash with the key 'name_prefix' like so:
 
 ``` ruby
   class Store < ActiveRecord::Base
     belongs_to :sales_person, class_name: User.to_s
-    collection_for_edit :sales_person, nil, name_prefix: :salesmen
+    collection_for_edit :sales_person, nil, name_prefix: :salesmen # This will create a method called 'salesmen_for_edit' on the instance of the User class for use in the form drop-down (in the view)
     collection_for_edit :sales_person, -> { User.salesmen }, name_prefix: :salesmen   # This is equivalent to the above
   end
 ```
