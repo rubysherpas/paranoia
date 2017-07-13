@@ -546,6 +546,14 @@ class ParanoiaTest < test_framework
     assert model.instance_variable_get(:@real_destroy_callback_called)
   end
 
+  def test_really_destroy_behavior_for_active_column_model
+    model = ActiveColumnModel.new
+    model.save
+    model.really_destroy!
+
+    refute ParanoidModel.unscoped.exists?(model.id)
+  end
+
   def test_really_delete
     model = ParanoidModel.new
     model.save
