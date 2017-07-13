@@ -165,7 +165,7 @@ module Paranoia
             association_data.really_destroy!
           end
         end
-        write_attribute(paranoia_column, current_time_from_proper_timezone)
+        update_columns(paranoia_destroy_attributes)
         destroy_without_paranoia
       end
     end
