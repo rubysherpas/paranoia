@@ -2,25 +2,22 @@ sudo: false
 language: ruby
 cache: bundler
 rvm:
-  - 2.2.6
-  - 2.3.3
+  - 2.2.7
+  - 2.3.4
   - 2.4.1
   - jruby-9.1.6.0
 
 env:
   matrix:
-    - RAILS='~> 4.2.7.1'
-    - RAILS='~> 5.0.0.1'
-    - RAILS='~> 5.1.0.rc1'
+    - RAILS='~> 4.2.0'
+    - RAILS='~> 5.0.0'
+    - RAILS='~> 5.1.0'
 
 matrix:
-  exclude:
-    - env: RAILS='~> 5.1.0.rc1'
-      rvm: 2.2.6
   allow_failures:
-    - env: RAILS='~> 4.2.7.1'
+    - env: RAILS='~> 4.2.0'
       rvm: jruby-9.1.6.0
-    - env: RAILS='~> 5.0.0.1'
+    - env: RAILS='~> 5.0.0'
       rvm: jruby-9.1.6.0
-    - env: RAILS='~> 5.1.0.rc1'
+    - env: RAILS='~> 5.1.0'
       rvm: jruby-9.1.6.0
