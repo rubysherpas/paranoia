@@ -147,10 +147,10 @@ module Paranoia
   alias :deleted? :paranoia_destroyed?
 
   def paranoia_update_columns(attributes)
+    update_columns(attributes)
     attributes.keys.each do |key|
       send("#{key}_will_change!")
     end
-    update_columns(attributes)
     changes_applied
   end
 
