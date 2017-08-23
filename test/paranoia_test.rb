@@ -14,6 +14,7 @@ def setup!
   {
     'parent_model_with_counter_cache_columns' => 'related_models_count INTEGER DEFAULT 0',
     'parent_models' => 'deleted_at DATETIME',
+    'parent_model_with_recovery_windows' => 'deleted_at DATETIME',
     'paranoid_models' => 'parent_model_id INTEGER, deleted_at DATETIME',
     'paranoid_model_with_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_id INTEGER',
     'paranoid_model_with_build_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, paranoid_model_with_has_one_and_build_id INTEGER, name VARCHAR(32)',
@@ -249,12 +250,6 @@ class ParanoiaTest < test_framework
   def test_default_recovery_window_value
     assert_nil ParanoidModel.paranoia_recovery_window
   end
-
-  # def test_default_sentinel_value_setter
-  #   ParanoidModel.paranoia_reovery = 5
-  #   assert_equal 5, ParanoidModel.paranoia_sentinel_value
-  #   ParanoidModel.paranoia_sentinel_value = nil
-  # end  
 
   def test_without_default_scope_option
     model = WithoutDefaultScopeModel.create
@@ -634,6 +629,38 @@ class ParanoiaTest < test_framework
     second_child.update(deleted_at: parent.deleted_at - 9.minutes)
 
     ParentModel.restore(parent.id, :recursive => true, :recovery_window => 10.minutes)
+    assert_equal true, parent.reload.deleted_at.nil?
+    assert_equal false, first_child.reload.deleted_at.nil?
+    assert_equal true, second_child.reload.deleted_at.nil?
+  end
+
+  def test_restore_with_associations_using_default_recovery_window
+    parent = ParentModelWithRecoveryWindow.create
+    first_child = parent.very_related_models.create
+    second_child = parent.very_related_models.create
+
+    parent.destroy
+    second_child.update(deleted_at: parent.deleted_at + 11.minutes)
+
+    parent.restore!(:recursive => true)
+    assert_equal true, parent.deleted_at.nil?
+    assert_equal true, first_child.reload.deleted_at.nil?
+    assert_equal true, second_child.reload.deleted_at.nil?
+
+    parent.destroy
+    second_child.update(deleted_at: parent.deleted_at + 11.minutes)
+
+    parent.restore(:recursive => true)
+    assert_equal true, parent.deleted_at.nil?
+    assert_equal true, first_child.reload.deleted_at.nil?
+    assert_equal false, second_child.reload.deleted_at.nil?
+
+    second_child.restore
+    parent.destroy
+    first_child.update(deleted_at: parent.deleted_at - 11.minutes)
+    second_child.update(deleted_at: parent.deleted_at - 9.minutes)
+
+    ParentModel.restore(parent.id, :recursive => true)
     assert_equal true, parent.reload.deleted_at.nil?
     assert_equal false, first_child.reload.deleted_at.nil?
     assert_equal true, second_child.reload.deleted_at.nil?
@@ -1076,7 +1103,6 @@ class ParanoiaTest < test_framework
 end
 
 # Helper classes
-
 class ParanoidModel < ActiveRecord::Base
   belongs_to :parent_model
   acts_as_paranoid
@@ -1143,6 +1169,20 @@ class ParentModel < ActiveRecord::Base
   has_many :non_paranoid_models, dependent: :destroy
   has_one :non_paranoid_model, dependent: :destroy
   has_many :asplode_models, dependent: :destroy
+  has_one :polymorphic_model, as: :parent, dependent: :destroy
+end
+
+class ParentModelWithRecoveryWindow < ActiveRecord::Base
+  acts_as_paranoid(recovery_window: 10.minutes)
+
+  # parent_model_with_recovery_windows
+
+  has_many :paranoid_models, foreign_key: 'parent_model_id'
+  has_many :related_models, foreign_key: 'parent_model_id'
+  has_many :very_related_models, class_name: 'RelatedModel', foreign_key: 'parent_model_id', dependent: :destroy
+  has_many :non_paranoid_models, foreign_key: 'parent_model_id', dependent: :destroy
+  has_one :non_paranoid_model, foreign_key: 'parent_model_id', dependent: :destroy
+  has_many :asplode_models, foreign_key: 'parent_model_id', dependent: :destroy
   has_one :polymorphic_model, as: :parent, dependent: :destroy
 end
 
