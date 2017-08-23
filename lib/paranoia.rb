@@ -141,7 +141,7 @@ module Paranoia
 
   def get_recovery_window_range(opts)
     return opts[:recovery_window_range] if opts[:recovery_window_range]
-    opts[:recovery_window] = default_recovery_window if opts[:recovery_window].blank? && default_recovery_window.present?
+    opts[:recovery_window] = paranoia_default_recovery_window if opts[:recovery_window].blank? && paranoia_default_recovery_window.present?
     return unless opts[:recovery_window]
     (deleted_at - opts[:recovery_window]..deleted_at + opts[:recovery_window])
   end
@@ -256,11 +256,11 @@ ActiveSupport.on_load(:active_record) do
       alias_method :destroy_without_paranoia, :destroy
 
       include Paranoia
-      class_attribute :paranoia_column, :paranoia_sentinel_value
+      class_attribute :paranoia_column, :paranoia_sentinel_value, :paranoia_default_recovery_window
 
       self.paranoia_column = (options[:column] || :deleted_at).to_s
       self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
-      Paranoia.default_recovery_window = options.fetch(:recovery_window) { Paranoia.default_recovery_window }
+      self.paranoia_default_recovery_window = options.fetch(:default_recovery_window) { Paranoia.default_recovery_window }
 
       def self.paranoia_scope
         where(paranoia_column => paranoia_sentinel_value)
@@ -301,6 +301,10 @@ ActiveSupport.on_load(:active_record) do
 
     def paranoia_sentinel_value
       self.class.paranoia_sentinel_value
+    end
+
+    def paranoia_default_recovery_window
+      self.class.paranoia_default_recovery_window
     end
   end
 end
