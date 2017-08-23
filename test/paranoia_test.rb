@@ -228,6 +228,14 @@ class ParanoiaTest < test_framework
 
   def test_default_sentinel_value
     assert_nil ParanoidModel.paranoia_sentinel_value
+    assert_equal 5, ParanoidModel.paranoia_sentinel_value = 5
+    assert_nil ParanoidModel.paranoia_sentinel_value = nil
+  end
+
+  def default_recovery_window
+    assert_nil ParanoidModel.default_recovery_window
+    assert_equal 120, ParanoidModel.default_recovery_window = 120
+    assert_nil ParanoidModel.default_recovery_window = nil
   end
 
   def test_without_default_scope_option
