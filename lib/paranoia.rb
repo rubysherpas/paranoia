@@ -14,7 +14,7 @@ module Paranoia
   end
 
   def self.default_recovery_window=(val)
-    @@default_recovery_window
+    @@default_recovery_window = val
   end
 
   def self.default_recovery_window
