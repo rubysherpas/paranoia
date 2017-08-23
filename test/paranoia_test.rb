@@ -232,7 +232,7 @@ class ParanoiaTest < test_framework
     assert_nil ParanoidModel.paranoia_sentinel_value = nil
   end
 
-  def default_recovery_window
+  def test_default_recovery_window
     assert_nil ParanoidModel.default_recovery_window
     assert_equal 120, ParanoidModel.default_recovery_window = 120
     assert_nil ParanoidModel.default_recovery_window = nil
