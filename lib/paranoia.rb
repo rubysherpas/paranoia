@@ -2,6 +2,7 @@ require 'active_record' unless defined? ActiveRecord
 
 module Paranoia
   @@default_sentinel_value = nil
+  @@default_recovery_window = nil
 
   # Change default_sentinel_value in a rails initializer
   def self.default_sentinel_value=(val)
@@ -10,6 +11,14 @@ module Paranoia
 
   def self.default_sentinel_value
     @@default_sentinel_value
+  end
+
+  def self.default_recovery_window=(val)
+    @@default_recovery_window
+  end
+
+  def self.default_recovery_window
+    @@default_recovery_window
   end
 
   def self.included(klazz)
@@ -132,6 +141,7 @@ module Paranoia
 
   def get_recovery_window_range(opts)
     return opts[:recovery_window_range] if opts[:recovery_window_range]
+    opts[:recovery_window] = default_recovery_window if opts[:recovery_window].blank? && default_recovery_window.present?
     return unless opts[:recovery_window]
     (deleted_at - opts[:recovery_window]..deleted_at + opts[:recovery_window])
   end
@@ -250,6 +260,8 @@ ActiveSupport.on_load(:active_record) do
 
       self.paranoia_column = (options[:column] || :deleted_at).to_s
       self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
+      Paranoia.default_recovery_window = options.fetch(:recovery_window) { Paranoia.default_recovery_window }
+
       def self.paranoia_scope
         where(paranoia_column => paranoia_sentinel_value)
       end
