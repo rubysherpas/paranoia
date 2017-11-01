@@ -14,7 +14,6 @@ module Paranoia
 
   def self.included(klazz)
     klazz.extend Query
-    klazz.extend Callbacks
   end
 
   module Query
@@ -50,26 +49,6 @@ module Paranoia
                                         "Please pass the id of the object by calling `.id`")
       end
       ids.map { |id| only_deleted.find(id).restore!(opts) }
-    end
-  end
-
-  module Callbacks
-    def self.extended(klazz)
-      [:restore, :real_destroy].each do |callback_name|
-        klazz.define_callbacks callback_name
-
-        klazz.define_singleton_method("before_#{callback_name}") do |*args, &block|
-          set_callback(callback_name, :before, *args, &block)
-        end
-
-        klazz.define_singleton_method("around_#{callback_name}") do |*args, &block|
-          set_callback(callback_name, :around, *args, &block)
-        end
-
-        klazz.define_singleton_method("after_#{callback_name}") do |*args, &block|
-          set_callback(callback_name, :after, *args, &block)
-        end
-      end
     end
   end
 
@@ -241,6 +220,8 @@ end
 ActiveSupport.on_load(:active_record) do
   class ActiveRecord::Base
     def self.acts_as_paranoid(options={})
+      define_model_callbacks :restore, :real_destroy
+
       alias_method :really_destroyed?, :destroyed?
       alias_method :really_delete, :delete
       alias_method :destroy_without_paranoia, :destroy
