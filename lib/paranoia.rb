@@ -52,7 +52,7 @@ module Paranoia
     end
   end
 
-  def destroy
+  def paranoia_destroy
     transaction do
       run_callbacks(:destroy) do
         @_disable_counter_cache = deleted?
@@ -69,8 +69,9 @@ module Paranoia
       end
     end
   end
+  alias_method :destroy, :paranoia_destroy
 
-  def delete
+  def paranoia_delete
     raise ActiveRecord::ReadOnlyRecord, "#{self.class} is marked as readonly" if readonly?
     if persisted?
       # if a transaction exists, add the record so that after_commit
@@ -82,6 +83,7 @@ module Paranoia
     end
     self
   end
+  alias_method :delete, :paranoia_delete
 
   def restore!(opts = {})
     self.class.transaction do
