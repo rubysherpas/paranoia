@@ -3,7 +3,7 @@ source 'https://rubygems.org'
 gem 'sqlite3', platforms: [:ruby]
 
 platforms :jruby do
-  gem 'activerecord-jdbcsqlite3-adapter', github: 'jruby/activerecord-jdbc-adapter', branch: 'rails-5'
+  gem 'activerecord-jdbcsqlite3-adapter'
 end
 
 platforms :rbx do
@@ -12,7 +12,7 @@ platforms :rbx do
   gem 'rubinius-developer_tools'
 end
 
-rails = ENV['RAILS'] || '~> 4.2.0'
+rails = ENV['RAILS'] || '~> 5.1.0'
 
 gem 'rails', rails
 
