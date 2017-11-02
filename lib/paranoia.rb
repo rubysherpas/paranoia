@@ -71,6 +71,11 @@ module Paranoia
   end
   alias_method :destroy, :paranoia_destroy
 
+  def paranoia_destroy!
+    paranoia_destroy ||
+      raise(ActiveRecord::RecordNotDestroyed.new("Failed to destroy the record", self))
+  end
+
   def paranoia_delete
     raise ActiveRecord::ReadOnlyRecord, "#{self.class} is marked as readonly" if readonly?
     if persisted?
