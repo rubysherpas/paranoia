@@ -56,7 +56,7 @@ module Paranoia
     transaction do
       run_callbacks(:destroy) do
         @_disable_counter_cache = deleted?
-        result = delete
+        result = paranoia_delete
         next result unless result && ActiveRecord::VERSION::STRING >= '4.2'
         each_counter_cached_associations do |association|
           foreign_key = association.reflection.foreign_key.to_sym
@@ -93,7 +93,7 @@ module Paranoia
         # This only happened on Rails versions earlier than 4.1.
         noop_if_frozen = ActiveRecord.version < Gem::Version.new("4.1")
         if within_recovery_window?(recovery_window_range) && ((noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen)
-          @_disable_counter_cache = !deleted?
+          @_disable_counter_cache = !paranoia_destroyed?
           write_attribute paranoia_column, paranoia_sentinel_value
           update_columns(paranoia_restore_attributes)
           each_counter_cached_associations do |association|
@@ -130,7 +130,7 @@ module Paranoia
   def really_destroy!
     transaction do
       run_callbacks(:real_destroy) do
-        @_disable_counter_cache = deleted?
+        @_disable_counter_cache = paranoia_destroyed?
         dependent_reflections = self.class.reflections.select do |name, reflection|
           reflection.options[:dependent] == :destroy
         end
@@ -300,7 +300,7 @@ module ActiveRecord
     class AssociationNotSoftDestroyedValidator < ActiveModel::EachValidator
       def validate_each(record, attribute, value)
         # if association is soft destroyed, add an error
-        if value.present? && value.deleted?
+        if value.present? && value.paranoia_destroyed?
           record.errors[attribute] << 'has been soft-deleted'
         end
       end
