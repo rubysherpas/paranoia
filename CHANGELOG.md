@@ -1,5 +1,19 @@
 # paranoia Changelog
 
+## 2.4.0
+
+* [#423](https://github.com/rubysherpas/paranoia/pull/423) Add `paranoia_destroy` and `paranoia_delete` aliases
+
+  [John Hawthorn (@jhawthorn)](https://github.com/jhawthorn)
+
+* [#408](https://github.com/rubysherpas/paranoia/pull/408) Fix instance variable `@_disable_counter_cache` not initialized warning.
+
+  [Akira Matsuda (@amatsuda)](https://github.com/amatsuda)
+
+* [#412](https://github.com/rubysherpas/paranoia/pull/412) Fix `really_destroy!` behavior with `sentinel_value`
+
+  [Steve Rice (@steverice)](https://github.com/steverice)
+
 ## 2.3.1
 
 * [#397](https://github.com/rubysherpas/paranoia/pull/397) Bump active record max version to support 5.1 final
