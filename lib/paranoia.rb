@@ -74,7 +74,7 @@ module Paranoia
   end
 
   def destroy
-    transaction do
+    ActiveRecord::Base.transaction do
       run_callbacks(:destroy) do
         @_disable_counter_cache = deleted?
         result = delete
@@ -105,7 +105,7 @@ module Paranoia
   end
 
   def restore!(opts = {})
-    self.class.transaction do
+    ActiveRecord::Base.transaction do
       run_callbacks(:restore) do
         recovery_window_range = get_recovery_window_range(opts)
         # Fixes a bug where the build would error because attributes were frozen.
@@ -147,7 +147,7 @@ module Paranoia
   alias :deleted? :paranoia_destroyed?
 
   def really_destroy!
-    transaction do
+    ActiveRecord::Base.transaction do
       run_callbacks(:real_destroy) do
         @_disable_counter_cache = deleted?
         dependent_reflections = self.class.reflections.select do |name, reflection|
@@ -313,7 +313,7 @@ module ActiveRecord
     class UniquenessValidator < ActiveModel::EachValidator
       prepend UniquenessParanoiaValidator
     end
-    
+
     class AssociationNotSoftDestroyedValidator < ActiveModel::EachValidator
       def validate_each(record, attribute, value)
         # if association is soft destroyed, add an error
