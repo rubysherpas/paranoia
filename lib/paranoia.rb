@@ -170,13 +170,17 @@ module Paranoia
   end
 
   def paranoia_destroy_attributes
+    timezoned_current_time = current_time_from_proper_timezone
+
     {
-      paranoia_column => current_time_from_proper_timezone
-    }.merge(timestamp_attributes_with_current_time)
+      paranoia_column => timezoned_current_time
+    }.merge(timestamp_attributes_with_current_time(timezoned_current_time))
   end
 
-  def timestamp_attributes_with_current_time
-    timestamp_attributes_for_update_in_model.each_with_object({}) { |attr,hash| hash[attr] = current_time_from_proper_timezone }
+  def timestamp_attributes_with_current_time(timezoned_current_time = nil)
+    timestamp_attributes_for_update_in_model.each_with_object({}) do |attr,hash| 
+      hash[attr] = timezoned_current_time || current_time_from_proper_timezone
+    end
   end
 
   # restore associated records that have been soft deleted when
