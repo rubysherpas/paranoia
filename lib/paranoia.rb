@@ -160,7 +160,7 @@ module Paranoia
   private
 
   def each_counter_cached_associations
-    !(defined?(@_disable_counter_cache) && @_disable_counter_cache) ? super : []
+    !(defined?(@_disable_counter_cache) && @_disable_counter_cache) && defined?(super) ? super : []
   end
 
   def paranoia_restore_attributes
