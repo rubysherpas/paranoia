@@ -12,6 +12,7 @@ env:
     - RAILS='~> 4.2.0'
     - RAILS='~> 5.0.0'
     - RAILS='~> 5.1.0'
+    - RAILS='~> 5.2.0.beta2'
 
 matrix:
   allow_failures:
@@ -20,4 +21,6 @@ matrix:
     - env: RAILS='~> 5.0.0'
       rvm: jruby-9.1.6.0
     - env: RAILS='~> 5.1.0'
+      rvm: jruby-9.1.6.0
+    - env: RAILS='~> 5.2.0.beta2'
       rvm: jruby-9.1.6.0
