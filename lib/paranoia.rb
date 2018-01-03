@@ -57,6 +57,7 @@ module Paranoia
       run_callbacks(:destroy) do
         @_disable_counter_cache = deleted?
         result = paranoia_delete
+        @_trigger_update_callback = result
         next result unless result && ActiveRecord::VERSION::STRING >= '4.2'
         each_counter_cached_associations do |association|
           foreign_key = association.reflection.foreign_key.to_sym
