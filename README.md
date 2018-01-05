@@ -1,3 +1,9 @@
+**Notice:** 
+
+`paranoia` has some surprising behaviour (like overriding ActiveRecord's `delete` and `destroy`) and is not recommended for new projects. See [`discard`'s README](https://github.com/jhawthorn/discard#why-not-paranoia-or-acts_as_paranoid) for more details.
+
+Paranoia will continue to accept bug fixes and support new versions of Rails but isn't accepting new features.
+
 # Paranoia
 
 Paranoia is a re-implementation of [acts\_as\_paranoid](http://github.com/ActsAsParanoid/acts_as_paranoid) for Rails 3/4/5, using much, much, much less code.
