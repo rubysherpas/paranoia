@@ -1,5 +1,6 @@
 sudo: false
 language: ruby
+before_install: gem update --system
 cache: bundler
 rvm:
   - 2.2
