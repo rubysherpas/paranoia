@@ -1,4 +1,5 @@
 require 'active_record' unless defined? ActiveRecord
+require 'paranoia/active_record_patches'
 
 module Paranoia
   @@default_sentinel_value = nil
