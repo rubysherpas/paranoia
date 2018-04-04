@@ -1,5 +1,8 @@
 require 'active_record' unless defined? ActiveRecord
-require 'paranoia/active_record_patches'
+
+if [ActiveRecord::VERSION::MAJOR, ActiveRecord::VERSION::MINOR] == [5, 2]
+  require 'paranoia/active_record_5_2'
+end
 
 module Paranoia
   @@default_sentinel_value = nil

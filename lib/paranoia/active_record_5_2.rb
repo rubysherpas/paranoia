@@ -5,8 +5,8 @@ module HandleParanoiaDestroyedInBelongsToAssociation
     case options[:dependent]
     when :destroy
       target.destroy
-      if defined? target.deleted?
-        raise ActiveRecord::Rollback unless target.deleted?
+      if target.respond_to?(:paranoia_destroyed?)
+        raise ActiveRecord::Rollback unless target.paranoia_destroyed?
       else
         raise ActiveRecord::Rollback unless target.destroyed?
       end
@@ -25,8 +25,8 @@ module HandleParanoiaDestroyedInHasOneAssociation
       when :destroy
         target.destroyed_by_association = reflection
         target.destroy
-        if defined? target.deleted?
-          throw(:abort) unless target.deleted?
+        if target.respond_to?(:paranoia_destroyed?)
+          throw(:abort) unless target.paranoia_destroyed?
         else
           throw(:abort) unless target.destroyed?
         end
