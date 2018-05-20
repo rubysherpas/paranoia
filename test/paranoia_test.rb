@@ -376,6 +376,20 @@ class ParanoiaTest < test_framework
     assert_equal 0, employee.employers.count
   end
 
+  def test_link_table_for_has_many_through_relationships_with_update_method_call
+    employer = Employer.create
+    employee = Employee.create
+    job = Job.create :employer => employer, :employee => employee
+    assert_equal 1, employer.jobs.count
+    assert_equal 1, employer.employees.count
+    assert_equal 1, employee.jobs.count
+    assert_equal 1, employee.employers.count
+
+    employer.update(employees: [])
+    assert_equal 1, Employee.unscoped.count
+    assert_equal 1, Job.unscoped.count
+  end
+
   def test_delete_behavior_for_callbacks
     model = CallbackModel.new
     model.save
