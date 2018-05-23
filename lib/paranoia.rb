@@ -238,7 +238,7 @@ ActiveSupport.on_load(:active_record) do
       alias_method :destroy_without_paranoia, :destroy
 
       include Paranoia
-      class_attribute :paranoia_column, :paranoia_sentinel_value
+      class_attribute :paranoia_column, :paranoia_sentinel_value, :paranoia_default_scope_enabled
 
       self.paranoia_column = (options[:column] || :deleted_at).to_s
       self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
@@ -248,6 +248,7 @@ ActiveSupport.on_load(:active_record) do
       class << self; alias_method :without_deleted, :paranoia_scope end
 
       unless options[:without_default_scope]
+        self.paranoia_default_scope_enabled = true
         default_scope { paranoia_scope }
       end
 
@@ -292,7 +293,7 @@ module ActiveRecord
     module UniquenessParanoiaValidator
       def build_relation(klass, *args)
         relation = super
-        return relation unless klass.respond_to?(:paranoia_column)
+        return relation unless klass.respond_to?(:paranoia_default_scope_enabled) && klass.paranoia_default_scope_enabled
         arel_paranoia_scope = klass.arel_table[klass.paranoia_column].eq(klass.paranoia_sentinel_value)
         if ActiveRecord::VERSION::STRING >= "5.0"
           relation.where(arel_paranoia_scope)
