@@ -70,11 +70,12 @@ module Paranoia
           association_table_plural_name = association.source_reflection.plural_name.to_sym
           association_key =
             "#{object_class.reflect_on_association(association_table_plural_name).foreign_key.pluralize}"
-          next if !attributes.key?(association_key)
+          link_table_class = association.through_reflection.klass
+          next if !attributes.key?(association_key) || !link_table_class.paranoid?
+
           association_id_array = attributes[association_key].reject(&:blank?)
           link_table_plural_name = association.through_reflection.plural_name.to_sym
           object_key = "#{object_class.reflect_on_association(link_table_plural_name).foreign_key}"
-          link_table_class = association.through_reflection.klass
           object_primary_key = association.active_record.primary_key.to_sym
 
           link_table_objects_to_be_soft_deleted =
