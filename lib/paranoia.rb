@@ -67,9 +67,8 @@ module Paranoia
     transaction do
       run_callbacks(:update) do
         has_many_through_associations.each do |association|
-          association_table_plural_name = association.source_reflection.plural_name.to_sym
           association_key =
-            "#{object_class.reflect_on_association(association_table_plural_name).foreign_key.pluralize}"
+            "#{object_class.reflect_on_association(association.name).foreign_key.pluralize}"
           link_table_class = association.through_reflection.klass
           next if !attributes.key?(association_key) || !link_table_class.paranoid?
 
