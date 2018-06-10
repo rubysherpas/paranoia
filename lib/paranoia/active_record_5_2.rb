@@ -4,6 +4,9 @@ module HandleParanoiaDestroyedInBelongsToAssociation
 
     case options[:dependent]
     when :destroy
+      @_destroy_callback_already_called ||= false
+      return if @_destroy_callback_already_called
+      @_destroy_callback_already_called = true
       target.destroy
       if target.respond_to?(:paranoia_destroyed?)
         raise ActiveRecord::Rollback unless target.paranoia_destroyed?
@@ -23,7 +26,10 @@ module HandleParanoiaDestroyedInHasOneAssociation
       when :delete
         target.delete
       when :destroy
+        @_destroy_callback_already_called ||= false
+        return if @_destroy_callback_already_called
         target.destroyed_by_association = reflection
+        @_destroy_callback_already_called = true
         target.destroy
         if target.respond_to?(:paranoia_destroyed?)
           throw(:abort) unless target.paranoia_destroyed?

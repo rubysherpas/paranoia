@@ -46,8 +46,10 @@ def setup!
     'active_column_models' => 'deleted_at DATETIME, active BOOLEAN',
     'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
     'paranoid_model_with_belongs_to_active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN, active_column_model_with_has_many_relationship_id INTEGER',
-    'active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN', 
-    'without_default_scope_models' => 'deleted_at DATETIME'
+    'active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
+    'without_default_scope_models' => 'deleted_at DATETIME',
+    'paranoid_has_one_dependent_destroys' => 'deleted_at DATETIME',
+    'paranoid_belongs_to_dependent_destroys' => 'deleted_at DATETIME, paranoid_has_one_dependent_destroy_id INTEGER'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -1053,6 +1055,18 @@ class ParanoiaTest < test_framework
       related_model.restore
       assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
     end
+
+    def test_circular_dependent_destroy_has_one_belongs_to
+      has_one_dependent_destroy = ParanoidHasOneDependentDestroy.create
+      belongs_to_dependent_destroy = ParanoidBelongsToDependentDestroy.create
+      belongs_to_dependent_destroy.paranoid_has_one_dependent_destroy = has_one_dependent_destroy
+      belongs_to_dependent_destroy.save!
+
+      belongs_to_dependent_destroy.destroy
+
+      refute has_one_dependent_destroy.reload.deleted_at.nil?
+      refute belongs_to_dependent_destroy.reload.deleted_at.nil?
+    end
   end
 
   private
@@ -1354,6 +1368,16 @@ end
 class PolymorphicModel < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :parent, polymorphic: true
+end
+
+class ParanoidHasOneDependentDestroy < ActiveRecord::Base
+  acts_as_paranoid
+  has_one :paranoid_belongs_to_dependent_destroy, dependent: :destroy
+end
+
+class ParanoidBelongsToDependentDestroy < ActiveRecord::Base
+  acts_as_paranoid
+  belongs_to :paranoid_has_one_dependent_destroy, dependent: :destroy
 end
 
 module Namespaced
