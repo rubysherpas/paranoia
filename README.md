@@ -260,7 +260,7 @@ class Client < ActiveRecord::Base
   def paranoia_destroy_attributes
     {
       deleted_at: current_time_from_proper_timezone,
-      active: nil
+      active: false
     }
   end
 end
