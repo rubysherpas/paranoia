@@ -14,7 +14,11 @@ end
 
 rails = ENV['RAILS'] || '~> 5.2.0'
 
-gem 'rails', rails
+if rails == 'master'
+  gem 'rails', git: 'https://github.com/rails/rails'
+else
+  gem 'rails', rails
+end
 
 # Specify your gem's dependencies in paranoia.gemspec
 gemspec
