@@ -27,3 +27,9 @@ matrix:
       rvm: jruby-9.1.6.0
     - env: RAILS='~> 5.2.0'
       rvm: jruby-9.1.6.0
+  exclude:
+    - env: RAILS='master'
+      rvm: 2.2
+    - env: RAILS='master'
+      rvm: 2.3.5
+
