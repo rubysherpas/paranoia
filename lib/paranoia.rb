@@ -1,6 +1,7 @@
 require 'active_record' unless defined? ActiveRecord
 
-if [ActiveRecord::VERSION::MAJOR, ActiveRecord::VERSION::MINOR] == [5, 2]
+if [ActiveRecord::VERSION::MAJOR, ActiveRecord::VERSION::MINOR] == [5, 2] ||
+   ActiveRecord::VERSION::MAJOR > 5
   require 'paranoia/active_record_5_2'
 end
 
@@ -305,7 +306,7 @@ module ActiveRecord
     class UniquenessValidator < ActiveModel::EachValidator
       prepend UniquenessParanoiaValidator
     end
-    
+
     class AssociationNotSoftDestroyedValidator < ActiveModel::EachValidator
       def validate_each(record, attribute, value)
         # if association is soft destroyed, add an error
