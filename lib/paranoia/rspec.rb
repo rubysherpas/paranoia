@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rspec/expectations'
 
 # Validate the subject's class did call "acts_as_paranoid"

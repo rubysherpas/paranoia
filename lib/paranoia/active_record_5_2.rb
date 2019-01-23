@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module HandleParanoiaDestroyedInBelongsToAssociation
   def handle_dependency
     return unless load_target

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'active_record' unless defined? ActiveRecord
 
 if [ActiveRecord::VERSION::MAJOR, ActiveRecord::VERSION::MINOR] == [5, 2] ||
