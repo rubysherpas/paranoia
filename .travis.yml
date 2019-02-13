@@ -35,3 +35,5 @@ matrix:
       env: RAILS='master'
     - rvm: 2.3.5
       env: RAILS='master'
+    - rvm: 2.4.3
+      env: RAILS='master'
