@@ -1,6 +1,6 @@
 require 'active_record' unless defined? ActiveRecord
 
-if [ActiveRecord::VERSION::MAJOR, ActiveRecord::VERSION::MINOR] == [5, 2]
+if ActiveRecord::VERSION::STRING >= "5.2"
   require 'paranoia/active_record_5_2'
 end
 
