@@ -12,8 +12,8 @@ rvm:
 
 env:
   matrix:
-    - RAILS='~> 4.2.0'
-    - RAILS='~> 5.0.0'
+    - RAILS='~> 4.2.0' SQLITE_VERSION='~> 1.3.6'
+    - RAILS='~> 5.0.0' SQLITE_VERSION='~> 1.3.6'
     - RAILS='~> 5.1.0'
     - RAILS='~> 5.2.0'
     - RAILS='master'
