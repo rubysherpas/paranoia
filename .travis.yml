@@ -33,7 +33,7 @@ matrix:
   exclude:
     - rvm: 2.2
       env: RAILS='master'
-    - rvm: 2.3.5
+    - rvm: 2.3.8
       env: RAILS='master'
-    - rvm: 2.4.3
+    - rvm: 2.4.5
       env: RAILS='master'
