@@ -1,6 +1,12 @@
 source 'https://rubygems.org'
 
-gem 'sqlite3', platforms: [:ruby]
+sqlite = ENV['SQLITE_VERSION']
+
+if sqlite
+  gem 'sqlite3', sqlite, platforms: [:ruby]
+else
+  gem 'sqlite3', platforms: [:ruby]
+end
 
 platforms :jruby do
   gem 'activerecord-jdbcsqlite3-adapter'
