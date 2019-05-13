@@ -60,7 +60,7 @@ module Paranoia
   def paranoia_destroy
     transaction do
       run_callbacks(:destroy) do
-        @_disable_counter_cache = deleted?
+        @_disable_counter_cache = paranoia_destroyed?
         result = paranoia_delete
         next result unless result && ActiveRecord::VERSION::STRING >= '4.2'
         each_counter_cached_associations do |association|
