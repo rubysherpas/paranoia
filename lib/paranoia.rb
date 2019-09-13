@@ -1,9 +1,6 @@
 require 'active_record' unless defined? ActiveRecord
 
-if [ActiveRecord::VERSION::MAJOR, ActiveRecord::VERSION::MINOR] == [5, 2] ||
-   ActiveRecord::VERSION::MAJOR > 5
-  require 'paranoia/active_record_5_2'
-end
+require 'paranoia/active_record_5_2'
 
 module Paranoia
   @@default_sentinel_value = nil
