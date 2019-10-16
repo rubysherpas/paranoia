@@ -131,6 +131,21 @@ class ParanoiaTest < test_framework
     assert model.instance_variable_get(:@after_commit_callback_called)
   end
 
+  def test_destroy_behavior_for_plain_models_callbacks_with_freshly_loaded_model
+    CallbackModel.create!
+    model = CallbackModel.first
+    model.remove_called_variables     # clear called callback flags
+    model.destroy
+
+    assert_nil model.instance_variable_get(:@update_callback_called)
+    assert_nil model.instance_variable_get(:@save_callback_called)
+    assert_nil model.instance_variable_get(:@validate_called)
+
+    assert model.instance_variable_get(:@destroy_callback_called)
+    assert model.instance_variable_get(:@after_destroy_callback_called)
+    assert model.instance_variable_get(:@after_commit_callback_called)
+  end
+
 
   def test_delete_behavior_for_plain_models_callbacks
     model = CallbackModel.new
