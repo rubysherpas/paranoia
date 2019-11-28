@@ -69,6 +69,7 @@ module Paranoia
           next unless send(association.reflection.name)
           association.decrement_counters
         end
+        @_trigger_update_callback = true
         @_disable_counter_cache = false
         result
       end
