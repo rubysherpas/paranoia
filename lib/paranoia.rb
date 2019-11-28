@@ -129,16 +129,16 @@ module Paranoia
   def get_recovery_window_range(opts)
     return opts[:recovery_window_range] if opts[:recovery_window_range]
     return unless opts[:recovery_window]
-    (deleted_at - opts[:recovery_window]..deleted_at + opts[:recovery_window])
+    (deletion_time - opts[:recovery_window]..deletion_time + opts[:recovery_window])
   end
 
   def within_recovery_window?(recovery_window_range)
     return true unless recovery_window_range
-    recovery_window_range.cover?(deleted_at)
+    recovery_window_range.cover?(deletion_time)
   end
 
   def paranoia_destroyed?
-    send(paranoia_column) != paranoia_sentinel_value
+    deletion_time != paranoia_sentinel_value
   end
   alias :deleted? :paranoia_destroyed?
 
@@ -292,6 +292,10 @@ ActiveSupport.on_load(:active_record) do
 
     def paranoia_sentinel_value
       self.class.paranoia_sentinel_value
+    end
+
+    def deletion_time
+      send(paranoia_column)
     end
   end
 end
