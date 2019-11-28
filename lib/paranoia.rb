@@ -69,7 +69,7 @@ module Paranoia
           next unless send(association.reflection.name)
           association.decrement_counters
         end
-        @_trigger_update_callback = true
+        @_trigger_destroy_callback = true
         @_disable_counter_cache = false
         result
       end
@@ -80,6 +80,10 @@ module Paranoia
   def paranoia_destroy!
     paranoia_destroy ||
       raise(ActiveRecord::RecordNotDestroyed.new("Failed to destroy the record", self))
+  end
+
+  def trigger_transactional_callbacks?
+    super || @_trigger_destroy_callback && paranoia_destroyed?
   end
 
   def paranoia_delete
