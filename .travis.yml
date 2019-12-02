@@ -1,8 +1,8 @@
 sudo: false
 language: ruby
+before_install: gem update --system	
 cache: bundler
 rvm:
-  - 2.2
   - 2.3.8
   - 2.4.5
   - 2.5.3
@@ -30,8 +30,6 @@ matrix:
     - env: RAILS='master'
       rvm: jruby-9.2.8.0
   exclude:
-    - rvm: 2.2
-      env: RAILS='master'
     - rvm: 2.3.8
       env: RAILS='master'
     - rvm: 2.4.5
