@@ -1,6 +1,6 @@
 sudo: false
 language: ruby
-before_install: gem update --system	
+before_install: gem update --system
 cache: bundler
 rvm:
   - 2.3.8
