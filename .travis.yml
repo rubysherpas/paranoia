@@ -1,8 +1,8 @@
 sudo: false
 language: ruby
 before_install:
-  - gem uninstall bundler -v ">=2"
-  - gem install bundler -v "<2"
+  - gem query -i -n "^bundler$" -v ">=2" && gem uninstall bundler -v ">=2"
+  - gem query -i -n "^bundler$" -v "<2" || gem install bundler -v "<2"
 cache: bundler
 rvm:
   - 2.3.8
