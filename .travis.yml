@@ -1,7 +1,7 @@
 sudo: false
 language: ruby
 before_install:
-  - gem query -I -n "^bundler$" -v ">=2" || gem uninstall bundler -v ">=2" || rvm @global do gem uninstall bundler -v ">=2"
+  - gem query -I -n "^bundler$" -v ">=2" || gem uninstall -x bundler -v ">=2" || rvm @global do gem uninstall -x bundler -v ">=2"
   - gem query -i -n "^bundler$" -v "<2" || gem install bundler -v "<2"
 cache: bundler
 rvm:
