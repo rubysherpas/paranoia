@@ -59,7 +59,7 @@ module Paranoia
 
   def paranoia_destroy
     transaction do
-      run_callbacks(:destroy) do
+      result = run_callbacks(:destroy) do
         @_disable_counter_cache = deleted?
         result = paranoia_delete
         next result unless result && ActiveRecord::VERSION::STRING >= '4.2'
@@ -72,7 +72,9 @@ module Paranoia
         @_disable_counter_cache = false
         result
       end
-    end
+      raise ActiveRecord::Rollback, "Not destroyed" unless self.deleted?
+      result
+    end || false
   end
   alias_method :destroy, :paranoia_destroy
 

@@ -46,7 +46,7 @@ def setup!
     'active_column_models' => 'deleted_at DATETIME, active BOOLEAN',
     'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
     'paranoid_model_with_belongs_to_active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN, active_column_model_with_has_many_relationship_id INTEGER',
-    'active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN', 
+    'active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
     'without_default_scope_models' => 'deleted_at DATETIME'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
@@ -189,11 +189,11 @@ class ParanoiaTest < test_framework
     p2 = ParanoidModel.create(:parent_model => parent2)
     p1.destroy
     p2.destroy
-    
+
     assert_equal 0, parent1.paranoid_models.count
     assert_equal 1, parent1.paranoid_models.only_deleted.count
 
-    assert_equal 2, ParanoidModel.only_deleted.joins(:parent_model).count    
+    assert_equal 2, ParanoidModel.only_deleted.joins(:parent_model).count
     assert_equal 1, parent1.paranoid_models.deleted.count
     assert_equal 0, parent1.paranoid_models.without_deleted.count
     p3 = ParanoidModel.create(:parent_model => parent1)
@@ -206,7 +206,7 @@ class ParanoiaTest < test_framework
     c1 = ActiveColumnModelWithHasManyRelationship.create(name: 'Jacky')
     c2 = ActiveColumnModelWithHasManyRelationship.create(name: 'Thomas')
     p1 = ParanoidModelWithBelongsToActiveColumnModelWithHasManyRelationship.create(name: 'Hello', active_column_model_with_has_many_relationship: c1)
-    
+
     c1.destroy
     assert_equal 1, ActiveColumnModelWithHasManyRelationship.count
     assert_equal 1, ActiveColumnModelWithHasManyRelationship.only_deleted.count
@@ -521,6 +521,16 @@ class ParanoiaTest < test_framework
     refute RelatedModel.unscoped.exists?(child1.id)
     refute NonParanoidModel.unscoped.exists?(child2.id)
     refute NonParanoidModel.unscoped.exists?(child3.id)
+  end
+
+  def test_not_destroy_child_if_abort_destroy
+    parent = ParentModel.create
+    child = parent.very_related_models.create
+    parent.destroy_unavailable = true
+    parent.destroy
+
+    assert_nil parent.reload.deleted_at, "Parent must be not deleted"
+    assert_nil child.reload.deleted_at, "Child must be not deleted"
   end
 
   def test_real_destroy_dependent_destroy_after_normal_destroy
@@ -1122,6 +1132,7 @@ class CallbackModel < ActiveRecord::Base
 end
 
 class ParentModel < ActiveRecord::Base
+  attr_accessor :destroy_unavailable
   acts_as_paranoid
   has_many :paranoid_models
   has_many :related_models
@@ -1130,6 +1141,17 @@ class ParentModel < ActiveRecord::Base
   has_one :non_paranoid_model, dependent: :destroy
   has_many :asplode_models, dependent: :destroy
   has_one :polymorphic_model, as: :parent, dependent: :destroy
+  before_destroy :validate_destroy
+
+  def validate_destroy
+    return unless self.destroy_unavailable
+
+    if ActiveRecord::VERSION::MAJOR < 5
+      false
+    else
+      throw :abort
+    end
+  end
 end
 
 class ParentModelWithCounterCacheColumn < ActiveRecord::Base
