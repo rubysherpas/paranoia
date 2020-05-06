@@ -83,6 +83,17 @@ class ParanoiaTest < test_framework
     assert_equal true, ParanoidModel.paranoid?
   end
 
+  def test_doubly_paranoid_model_class_is_warned
+    assert_output(/DoublyParanoidModel is calling acts_as_paranoid more than once!/) do
+      DoublyParanoidModel.acts_as_paranoid
+    end
+
+    refute_equal(
+      DoublyParanoidModel.instance_method(:destroy).source_location,
+      DoublyParanoidModel.instance_method(:destroy_without_paranoia).source_location
+    )
+  end
+
   def test_plain_models_are_not_paranoid
     assert_equal false, PlainModel.new.paranoid?
   end
@@ -1096,6 +1107,11 @@ end
 
 class ParanoidModel < ActiveRecord::Base
   belongs_to :parent_model
+  acts_as_paranoid
+end
+
+class DoublyParanoidModel < ActiveRecord::Base
+  self.table_name = 'plain_models'
   acts_as_paranoid
 end
 
