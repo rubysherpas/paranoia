@@ -3,12 +3,12 @@ language: ruby
 before_install: gem update --system
 cache: bundler
 rvm:
-  - 2.3.8
-  - 2.4.10
-  - 2.5.8
-  - 2.6.6
-  - 2.7.1
-  - jruby-9.1.6.0
+  # - 2.3.8
+  # - 2.4.10
+  # - 2.5.8
+  # - 2.6.6
+  # - 2.7.1
+  - jruby-9.1.17.0
 
 env:
   matrix:
@@ -17,3 +17,16 @@ env:
     - RAILS='~> 5.2.0'
     - RAILS='~> 6.0.0'
     - RAILS='master'
+
+matrix:
+  exclude:
+    # Rails 6 requires ruby >= 2.5
+    - rvm: 2.3.8
+      env: RAILS='~> 6.0.0'
+    - rvm: 2.3.8
+      env: RAILS='master'
+    - rvm: 2.4.10
+      env: RAILS='~> 6.0.0'
+    - rvm: 2.4.10
+      env: RAILS='master'
+
