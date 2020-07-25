@@ -224,8 +224,9 @@ module Paranoia
 
         association_class = association_class_name.constantize
         if association_class.paranoid?
-          association_class.only_deleted.where(association_find_conditions).first
-            .try!(:restore, recursive: true, :recovery_window_range => recovery_window_range)
+          association_class.only_deleted.where(association_find_conditions).order(paranoia_column => :desc).each do |record|
+            break unless record.restore(:recursive => true, :recovery_window_range => recovery_window_range).reload.paranoia_destroyed?
+          end
         end
       end
     end
