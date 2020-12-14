@@ -316,7 +316,7 @@ module ActiveRecord
       def validate_each(record, attribute, value)
         # if association is soft destroyed, add an error
         if value.present? && value.paranoia_destroyed?
-          record.errors[attribute] << 'has been soft-deleted'
+          record.errors.add(attribute, 'has been soft-deleted')
         end
       end
     end
