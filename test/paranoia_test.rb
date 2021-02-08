@@ -9,6 +9,24 @@ if ActiveRecord::Base.respond_to?(:raise_in_transactional_callbacks=)
   ActiveRecord::Base.raise_in_transactional_callbacks = true
 end
 
+if ActiveRecord::Base.respond_to?(:destroy_association_async_job=)
+
+  class MockDestroyAssociationAsyncJob
+    def self.perform_later(
+      owner_model_name: nil, owner_id: nil,
+      association_class: nil, association_ids: nil, association_primary_key_column: nil,
+      ensuring_owner_was_method: nil
+    )
+      association_model = association_class.constantize
+      association_model.where(association_primary_key_column => association_ids).find_each do |r|
+        r.destroy
+      end
+    end
+  end
+
+  ActiveRecord::Base.destroy_association_async_job = MockDestroyAssociationAsyncJob
+end
+
 def connect!
   ActiveRecord::Base.establish_connection :adapter => 'sqlite3', database: ':memory:'
 end
@@ -1070,6 +1088,21 @@ class ParanoiaTest < test_framework
     end
   end
 
+  if ActiveRecord::VERSION::STRING >= '6.1'
+    def test_restore_on_has_many_dependent_destroy_async_association
+      parent = ParentModelWithDependentDestroyAsync.create
+      child = ParanoidModelWithDependentDestroyAsync.create(parent_model: parent)
+
+      parent.destroy
+
+      assert_equal 0, child.class.count
+
+      parent.restore(recursive: true)
+
+      assert_equal 1, child.class.count
+    end
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
@@ -1384,5 +1417,15 @@ module Namespaced
   class ParanoidBelongsTo < ActiveRecord::Base
     acts_as_paranoid
     belongs_to :paranoid_has_one
+  end
+end
+
+if ActiveRecord::VERSION::STRING >= '6.1'
+  class ParentModelWithDependentDestroyAsync < ParentModel
+    has_many :paranoid_model_with_dependent_destroy_asyncs, dependent: :destroy_async, foreign_key: 'parent_model_id'
+  end
+
+  class ParanoidModelWithDependentDestroyAsync < ParanoidModel
+    belongs_to :paranoid_model_with_dependent_destroy_asyncs, foreign_key: 'parent_model_id'
   end
 end
