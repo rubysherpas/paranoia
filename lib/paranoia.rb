@@ -193,7 +193,7 @@ module Paranoia
   # we called #destroy
   def restore_associated_records(recovery_window_range = nil)
     destroyed_associations = self.class.reflect_on_all_associations.select do |association|
-      association.options[:dependent] == :destroy
+      association.options[:dependent] == :destroy || association.options[:dependent] == :destroy_async
     end
 
     destroyed_associations.each do |association|
