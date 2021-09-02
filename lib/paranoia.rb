@@ -40,7 +40,7 @@ module Paranoia
       # these will not match != sentinel value because "NULL != value" is
       # NULL under the sql standard
       # Scoping with the table_name is mandatory to avoid ambiguous errors when joining tables.
-      scoped_quoted_paranoia_column = "#{self.table_name}.#{connection.quote_column_name(paranoia_column)}"
+      scoped_quoted_paranoia_column = "#{connection.quote_table_name(self.table_name)}.#{connection.quote_column_name(paranoia_column)}"
       with_deleted.where("#{scoped_quoted_paranoia_column} IS NULL OR #{scoped_quoted_paranoia_column} != ?", paranoia_sentinel_value)
     end
     alias_method :deleted, :only_deleted
