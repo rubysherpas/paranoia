@@ -30,6 +30,7 @@ def setup!
     'featureful_models' => 'deleted_at DATETIME, name VARCHAR(32)',
     'plain_models' => 'deleted_at DATETIME',
     'callback_models' => 'deleted_at DATETIME',
+    'after_commit_callback_models' => 'deleted_at DATETIME',
     'fail_callback_models' => 'deleted_at DATETIME',
     'related_models' => 'parent_model_id INTEGER, parent_model_with_counter_cache_column_id INTEGER, deleted_at DATETIME',
     'asplode_models' => 'parent_model_id INTEGER, deleted_at DATETIME',
@@ -145,6 +146,20 @@ class ParanoiaTest < test_framework
     assert model.instance_variable_get(:@destroy_callback_called)
     assert model.instance_variable_get(:@after_destroy_callback_called)
     assert model.instance_variable_get(:@after_commit_callback_called)
+  end
+
+  def test_destroy_behavior_for_freshly_saved_models_after_commit_callbacks
+    model = AfterCommitCallbackModel.create!
+
+    assert_equal 1, model.after_create_commit_called_times
+    assert_equal 0, model.after_destroy_commit_called_times
+
+    # clear the counters, but do not reload from DB
+    model.remove_called_variables
+
+    model.destroy
+    assert_equal 0, model.after_create_commit_called_times
+    assert_equal 1, model.after_destroy_commit_called_times
   end
 
   def test_delete_behavior_for_plain_models_callbacks
@@ -1133,6 +1148,33 @@ class CallbackModel < ActiveRecord::Base
 
   def remove_called_variables
     instance_variables.each {|name| (name.to_s.end_with?('_called')) ? remove_instance_variable(name) : nil}
+  end
+end
+
+class AfterCommitCallbackModel < ActiveRecord::Base
+  acts_as_paranoid
+
+  after_commit :increment_after_create_commit_called_times, on: :create
+  after_commit :increment_after_destroy_commit_called_times, on: :destroy
+
+  def increment_after_create_commit_called_times
+    @after_create_commit_called_times = after_create_commit_called_times + 1
+  end
+
+  def increment_after_destroy_commit_called_times
+    @after_destroy_commit_called_times = after_destroy_commit_called_times + 1
+  end
+
+  def after_create_commit_called_times
+    @after_create_commit_called_times || 0
+  end
+
+  def after_destroy_commit_called_times
+    @after_destroy_commit_called_times || 0
+  end
+
+  def remove_called_variables
+    instance_variables.each {|name| (name.to_s.end_with?('_called_times')) ? remove_instance_variable(name) : nil}
   end
 end
 
