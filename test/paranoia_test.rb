@@ -30,6 +30,7 @@ def setup!
     'featureful_models' => 'deleted_at DATETIME, name VARCHAR(32)',
     'plain_models' => 'deleted_at DATETIME',
     'callback_models' => 'deleted_at DATETIME',
+    'after_commit_callback_models' => 'deleted_at DATETIME',
     'fail_callback_models' => 'deleted_at DATETIME',
     'association_with_abort_models' => 'deleted_at DATETIME',
     'related_models' => 'parent_model_id INTEGER, parent_model_with_counter_cache_column_id INTEGER, deleted_at DATETIME',
@@ -47,7 +48,7 @@ def setup!
     'active_column_models' => 'paranoid_model_id INTEGER, deleted_at DATETIME, active BOOLEAN',
     'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
     'paranoid_model_with_belongs_to_active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN, active_column_model_with_has_many_relationship_id INTEGER',
-    'active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN', 
+    'active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
     'without_default_scope_models' => 'deleted_at DATETIME'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
@@ -188,6 +189,20 @@ class ParanoiaTest < test_framework
     assert model.instance_variable_get(:@after_commit_callback_called)
   end
 
+  def test_destroy_behavior_for_freshly_saved_models_after_commit_callbacks
+    model = AfterCommitCallbackModel.create!
+
+    assert_equal 1, model.after_create_commit_called_times
+    assert_equal 0, model.after_destroy_commit_called_times
+
+    # clear the counters, but do not reload from DB
+    model.remove_called_variables
+
+    model.destroy
+    assert_equal 0, model.after_create_commit_called_times
+    assert_equal 1, model.after_destroy_commit_called_times
+  end
+
   def test_delete_behavior_for_plain_models_callbacks
     model = CallbackModel.new
     model.save
@@ -245,11 +260,11 @@ class ParanoiaTest < test_framework
     p2 = ParanoidModel.create(:parent_model => parent2)
     p1.destroy
     p2.destroy
-    
+
     assert_equal 0, parent1.paranoid_models.count
     assert_equal 1, parent1.paranoid_models.only_deleted.count
 
-    assert_equal 2, ParanoidModel.only_deleted.joins(:parent_model).count    
+    assert_equal 2, ParanoidModel.only_deleted.joins(:parent_model).count
     assert_equal 1, parent1.paranoid_models.deleted.count
     assert_equal 0, parent1.paranoid_models.without_deleted.count
     p3 = ParanoidModel.create(:parent_model => parent1)
@@ -287,7 +302,7 @@ class ParanoiaTest < test_framework
     c1 = ActiveColumnModelWithHasManyRelationship.create(name: 'Jacky')
     c2 = ActiveColumnModelWithHasManyRelationship.create(name: 'Thomas')
     p1 = ParanoidModelWithBelongsToActiveColumnModelWithHasManyRelationship.create(name: 'Hello', active_column_model_with_has_many_relationship: c1)
-    
+
     c1.destroy
     assert_equal 1, ActiveColumnModelWithHasManyRelationship.count
     assert_equal 1, ActiveColumnModelWithHasManyRelationship.only_deleted.count
@@ -1236,6 +1251,33 @@ class AssociationWithAbortModel < ActiveRecord::Base
       throw :abort
     end
   }
+end
+
+class AfterCommitCallbackModel < ActiveRecord::Base
+  acts_as_paranoid
+
+  after_commit :increment_after_create_commit_called_times, on: :create
+  after_commit :increment_after_destroy_commit_called_times, on: :destroy
+
+  def increment_after_create_commit_called_times
+    @after_create_commit_called_times = after_create_commit_called_times + 1
+  end
+
+  def increment_after_destroy_commit_called_times
+    @after_destroy_commit_called_times = after_destroy_commit_called_times + 1
+  end
+
+  def after_create_commit_called_times
+    @after_create_commit_called_times || 0
+  end
+
+  def after_destroy_commit_called_times
+    @after_destroy_commit_called_times || 0
+  end
+
+  def remove_called_variables
+    instance_variables.each {|name| (name.to_s.end_with?('_called_times')) ? remove_instance_variable(name) : nil}
+  end
 end
 
 class ParentModel < ActiveRecord::Base
