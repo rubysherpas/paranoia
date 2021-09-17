@@ -18,7 +18,7 @@ platforms :rbx do
   gem 'rubysl-test-unit'
 end
 
-rails = ENV['RAILS'] || '~> 5.2.0'
+rails = ENV['RAILS'] || '~> 6.0.4'
 
 if rails == 'master'
   gem 'rails', github: 'rails/rails'
