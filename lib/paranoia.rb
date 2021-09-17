@@ -58,7 +58,7 @@ module Paranoia
   end
 
   def paranoia_destroy
-    transaction do
+    with_transaction_returning_status do
       run_callbacks(:destroy) do
         @_disable_counter_cache = deleted?
         result = paranoia_delete
@@ -143,7 +143,7 @@ module Paranoia
   alias :deleted? :paranoia_destroyed?
 
   def really_destroy!
-    transaction do
+    with_transaction_returning_status do
       run_callbacks(:real_destroy) do
         @_disable_counter_cache = paranoia_destroyed?
         dependent_reflections = self.class.reflections.select do |name, reflection|
