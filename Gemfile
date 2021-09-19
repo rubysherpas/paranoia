@@ -18,12 +18,12 @@ platforms :rbx do
   gem 'rubysl-test-unit'
 end
 
-rails = ENV['RAILS'] || '~> 5.2.0'
+rails = ENV['RAILS'] || ['>= 5.2.0', '< 7.1']
 
 if rails == 'master'
   gem 'rails', github: 'rails/rails'
 else
-  gem 'rails', rails
+  gem('rails', *rails)
 end
 
 # Specify your gem's dependencies in paranoia.gemspec
