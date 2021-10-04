@@ -1,0 +1,55 @@
+name: Test
+
+on:
+  push:
+    branches: [ core ]
+  pull_request:
+    branches: [ core ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby-version:
+          - 2.3.8
+          - 2.4.5
+          - 2.5.3
+          - 2.6.3
+        gemfile:
+          - rails_4_2
+          - rails_5_0
+          - rails_5_1
+          - rails_5_2
+          - rails_6_0
+          - rails_6_1
+        exclude:
+          - ruby-version: '2.3.8'
+            gemfile: rails_6_0
+          - ruby-version: '2.3.8'
+            gemfile: rails_6_1
+          - ruby-version: '2.4.5'
+            gemfile: rails_6_0
+          - ruby-version: '2.4.5'
+            gemfile: rails_6_1
+
+    env:
+      BUNDLE_GEMFILE: gemfiles/${{ matrix.gemfile }}.gemfile
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Ruby with Bundler 1
+        if: ${{ matrix.gemfile == 'rails_4_2' }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler: 1
+          bundler-cache: true
+      - name: Set up Ruby with Bundler 2
+        if: ${{ matrix.gemfile != 'rails_4_2' }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+      - name: Run tests
+        run: bundle exec rake
