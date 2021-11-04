@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.license     = 'MIT'
   s.summary     = "Paranoia is a re-implementation of acts_as_paranoid for Rails 3, 4, and 5, using much, much, much less code."
   s.description = <<-DSC
-    Paranoia is a re-implementation of acts_as_paranoid for Rails 4, 5, and 6,
+    Paranoia is a re-implementation of acts_as_paranoid for Rails 4, 5, 6, and 7,
     using much, much, much less code. You would use either plugin / gem if you
     wished that when you called destroy on an Active Record object that it
     didn't actually destroy it, but just "hid" the record. Paranoia does this
@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = ">= 1.3.6"
 
-  s.required_ruby_version = '>= 2.0'
+  s.required_ruby_version = '>= 2.5'
 
   s.add_dependency 'activerecord', '>= 4.0', '< 7.1'
 
