@@ -23,8 +23,6 @@ jobs:
           - jruby-9.2.19.0
           - jruby-9.3.1.0
         rails:
-          - '~> 4.2.0'
-          - '~> 5.0.0'
           - '~> 5.1.0'
           - '~> 5.2.0'
           - '~> 6.1.0'
@@ -41,13 +39,9 @@ jobs:
         - rails: '~> 7.0.0.alpha2'
           ruby: 2.5
         # Legacy Rails with newer rubies
-        - rails: '~> 4.2.0'
-          ruby: 2.7
-        - rails: '~> 5.0.0'
-          ruby: 2.7
-        - rails: '~> 4.2.0'
+        - rails: '~> 5.1.0'
           ruby: 3.0
-        - rails: '~> 5.0.0'
+        - rails: '~> 5.2.0'
           ruby: 3.0
 
     env:
