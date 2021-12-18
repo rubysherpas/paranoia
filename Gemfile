@@ -20,7 +20,7 @@ end
 
 rails = ENV['RAILS'] || '~> 5.2.0'
 
-if rails == 'master'
+if rails == 'edge'
   gem 'rails', github: 'rails/rails'
 else
   gem 'rails', rails
