@@ -26,7 +26,7 @@ jobs:
           - '~> 5.1.0'
           - '~> 5.2.0'
           - '~> 6.1.0'
-          - '~> 7.0.0.alpha2'
+          - '~> 7.0.0'
           - 'edge'
         exclude:
         # Rails edge is now 7.x and requires ruby 2.7
@@ -34,9 +34,9 @@ jobs:
           ruby: 2.6
         - rails: 'edge'
           ruby: 2.5
-        - rails: '~> 7.0.0.alpha2'
+        - rails: '~> 7.0.0'
           ruby: 2.6
-        - rails: '~> 7.0.0.alpha2'
+        - rails: '~> 7.0.0'
           ruby: 2.5
         # Legacy Rails with newer rubies
         - rails: '~> 5.1.0'
