@@ -230,7 +230,12 @@ module Paranoia
       end
     end
 
-    clear_association_cache if destroyed_associations.present?
+    if ActiveRecord.version.to_s > '7'
+      # Method deleted in https://github.com/rails/rails/commit/dd5886d00a2d5f31ccf504c391aad93deb014eb8
+      @association_cache.clear if persisted? && destroyed_associations.present?
+    else
+      clear_association_cache if destroyed_associations.present?
+    end
   end
 end
 
