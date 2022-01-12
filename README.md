@@ -1,4 +1,5 @@
 [![Gem Version](https://badge.fury.io/rb/paranoia.svg)](https://badge.fury.io/rb/paranoia)
+[![build](https://github.com/rubysherpas/paranoia/actions/workflows/build.yml/badge.svg)](https://github.com/rubysherpas/paranoia/actions/workflows/build.yml)
 
 **Notice:** 
 
