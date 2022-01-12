@@ -1,5 +1,16 @@
 # paranoia Changelog
 
+## 2.5.0
+
+ * [#516](https://github.com/rubysherpas/paranoia/pull/516) Add support for ActiveRecord 7.0, drop support for EOL Ruby < 2.5 and Rails < 5.1
+    adding support for Rails 7
+    
+   [Mathieu Jobin](https://github.com/mathieujobin)
+ * [#515](https://github.com/rubysherpas/paranoia/pull/515) Switch from Travis CI to GitHub Actions
+
+   [Shinichi Maeshima](https://github.com/willnet)
+
+
 ## 2.4.3
 
 * [#503](https://github.com/rubysherpas/paranoia/pull/503) Bump activerecord dependency for Rails 6.1
