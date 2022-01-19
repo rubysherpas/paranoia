@@ -245,6 +245,22 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.deleted.count
   end
 
+  def test_destroy_behavior_for_custom_column_models_with_recovery_options
+    model = CustomColumnModel.new
+    model.save!
+
+    assert_nil model.destroyed_at
+
+    model.destroy
+
+    assert_equal false, model.destroyed_at.nil?
+    assert model.paranoia_destroyed?
+
+    model.restore!(recovery_window: 2.minutes)
+
+    assert_equal 1, model.class.count
+  end
+
   def test_default_sentinel_value
     assert_nil ParanoidModel.paranoia_sentinel_value
   end

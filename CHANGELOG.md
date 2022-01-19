@@ -1,5 +1,11 @@
 # paranoia Changelog
 
+## 2.5.1
+
+* [#481](https://github.com/rubysherpas/paranoia/pull/481) Replaces hard coded `deleted_at` with `paranoia_column`.
+
+ [Hassanin Ahmed](https://github.com/sas1ni69)
+
 ## 2.5.0
 
  * [#516](https://github.com/rubysherpas/paranoia/pull/516) Add support for ActiveRecord 7.0, drop support for EOL Ruby < 2.5 and Rails < 5.1
@@ -9,7 +15,6 @@
  * [#515](https://github.com/rubysherpas/paranoia/pull/515) Switch from Travis CI to GitHub Actions
 
    [Shinichi Maeshima](https://github.com/willnet)
-
 
 ## 2.4.3
 
