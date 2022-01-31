@@ -1,5 +1,4 @@
-
-if defined?(RSpec)
+if Rails.env.test?
   require 'rspec/expectations'
 
   # Validate the subject's class did call "acts_as_paranoid"
