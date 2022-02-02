@@ -113,6 +113,14 @@ class ParanoiaTest < test_framework
     assert_equal to_param, model.to_param
   end
 
+  def test_paranoid_model_delete_outside_transaction
+    model = ParanoidModel.new
+    model.save!
+
+    model.delete
+    assert model.to_param
+  end
+
   def test_destroy_behavior_for_plain_models
     model = PlainModel.new
     assert_equal 0, model.class.count
