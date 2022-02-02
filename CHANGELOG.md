@@ -2,15 +2,18 @@
 
 ## 2.5.2
 
+* [#526](https://github.com/rubysherpas/paranoia/pull/526) Do not include tests files in packaged gem
+
+  [Jason Fleetwood-Boldt](https://github.com/jasonfb)
 * [#492](https://github.com/rubysherpas/paranoia/pull/492) Warn if acts_as_paranoid is called more than once on the same model
 
- [Ignatius Reza](https://github.com/ignatiusreza)
+  [Ignatius Reza](https://github.com/ignatiusreza)
 
 ## 2.5.1
 
 * [#481](https://github.com/rubysherpas/paranoia/pull/481) Replaces hard coded `deleted_at` with `paranoia_column`.
 
- [Hassanin Ahmed](https://github.com/sas1ni69)
+  [Hassanin Ahmed](https://github.com/sas1ni69)
 
 ## 2.5.0
 
