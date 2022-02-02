@@ -242,6 +242,12 @@ end
 ActiveSupport.on_load(:active_record) do
   class ActiveRecord::Base
     def self.acts_as_paranoid(options={})
+      if included_modules.include?(Paranoia)
+        puts "[WARN] #{self.name} is calling acts_as_paranoid more than once!"
+
+        return
+      end
+
       define_model_callbacks :restore, :real_destroy
 
       alias_method :really_destroyed?, :destroyed?

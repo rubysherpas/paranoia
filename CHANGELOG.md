@@ -1,5 +1,11 @@
 # paranoia Changelog
 
+## 2.5.2
+
+* [#492](https://github.com/rubysherpas/paranoia/pull/492) Warn if acts_as_paranoid is called more than once on the same model
+
+ [Ignatius Reza](https://github.com/ignatiusreza)
+
 ## 2.5.1
 
 * [#481](https://github.com/rubysherpas/paranoia/pull/481) Replaces hard coded `deleted_at` with `paranoia_column`.
