@@ -29,7 +29,12 @@ Gem::Specification.new do |s|
   s.add_development_dependency "bundler", ">= 1.0.0"
   s.add_development_dependency "rake"
 
-  s.files        = `git ls-files`.split("\n")
+
+  s.files         = Dir.chdir(File.expand_path('..', __FILE__)) do
+    files = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)})  }
+    files
+  end
+
   s.executables  = `git ls-files`.split("\n").map{|f| f =~ /^bin\/(.*)/ ? $1 : nil}.compact
   s.require_path = 'lib'
 end
