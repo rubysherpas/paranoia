@@ -43,7 +43,7 @@ def setup!
     'namespaced_paranoid_has_ones' => 'deleted_at DATETIME, paranoid_belongs_tos_id INTEGER',
     'namespaced_paranoid_belongs_tos' => 'deleted_at DATETIME, paranoid_has_one_id INTEGER',
     'unparanoid_unique_models' => 'name VARCHAR(32), paranoid_with_unparanoids_id INTEGER',
-    'active_column_models' => 'deleted_at DATETIME, active BOOLEAN',
+    'active_column_models' => 'paranoid_model_id INTEGER, deleted_at DATETIME, active BOOLEAN',
     'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
     'paranoid_model_with_belongs_to_active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN, active_column_model_with_has_many_relationship_id INTEGER',
     'active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN', 
@@ -226,6 +226,31 @@ class ParanoiaTest < test_framework
     assert_equal 2, parent1.paranoid_models.with_deleted.count
     assert_equal 1, parent1.paranoid_models.without_deleted.count
     assert_equal [p1,p3], parent1.paranoid_models.with_deleted
+  end
+
+  def test_paranoid_model_has_many_active_column_model
+    parent1 = ParentModel.create
+    p1 = ParanoidModel.create(:parent_model => parent1)
+    acm1 = ActiveColumnModel.create(paranoid_model: p1)
+
+    assert_nil p1.reload.deleted_at
+    assert_equal 1, p1.active_column_models.count
+    assert_equal true, acm1.active
+    assert_nil acm1.deleted_at
+
+    p1.destroy
+
+    assert p1.reload.deleted_at != nil
+    assert_equal 0, p1.active_column_models.count
+    assert_nil acm1.reload.active
+    assert acm1.reload.deleted_at != nil
+
+    p1.restore(recursive: true, recovery_window: 10.minutes)
+
+    assert_nil p1.reload.deleted_at
+    assert_equal 1, p1.active_column_models.count
+    assert_equal true, acm1.reload.active
+    assert_nil acm1.reload.deleted_at
   end
 
   def test_only_deleted_with_joins
@@ -1106,8 +1131,11 @@ end
 # Helper classes
 
 class ParanoidModel < ActiveRecord::Base
-  belongs_to :parent_model
   acts_as_paranoid
+  belongs_to :parent_model
+
+  has_many :active_column_models, dependent: :destroy
+
 end
 
 class DoublyParanoidModel < ActiveRecord::Base
@@ -1170,7 +1198,7 @@ end
 
 class ParentModel < ActiveRecord::Base
   acts_as_paranoid
-  has_many :paranoid_models
+  has_many :paranoid_models, dependent: :destroy
   has_many :related_models
   has_many :very_related_models, :class_name => 'RelatedModel', dependent: :destroy
   has_many :non_paranoid_models, dependent: :destroy
@@ -1233,8 +1261,11 @@ class WithoutDefaultScopeModel < ActiveRecord::Base
   acts_as_paranoid without_default_scope: true
 end
 
+
 class ActiveColumnModel < ActiveRecord::Base
   acts_as_paranoid column: :active, sentinel_value: true
+
+  belongs_to :paranoid_model
 
   def paranoia_restore_attributes
     {
