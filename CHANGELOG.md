@@ -1,5 +1,14 @@
 # paranoia Changelog
 
+## 2.5.3
+
+* [#532](https://github.com/rubysherpas/paranoia/pull/532) Fix: correct bug when sentinel_value is not a timestamp
+  [Hassanin Ahmed](https://github.com/sas1ni69)
+* [#531](https://github.com/rubysherpas/paranoia/pull/531) Added test case to reproduce bug introduce in v2.5.1
+  [Sherif Elkassaby](https://github.com/sherif-nedap)
+* [#529](https://github.com/rubysherpas/paranoia/pull/529) Fix: Do not define a RSpec matcher when RSpec isn't present
+  [Sebastian Welther](https://github.com/swelther)
+
 ## 2.5.2
 
 * [#526](https://github.com/rubysherpas/paranoia/pull/526) Do not include tests files in packaged gem
@@ -19,7 +28,7 @@
 
  * [#516](https://github.com/rubysherpas/paranoia/pull/516) Add support for ActiveRecord 7.0, drop support for EOL Ruby < 2.5 and Rails < 5.1
     adding support for Rails 7
-    
+
    [Mathieu Jobin](https://github.com/mathieujobin)
  * [#515](https://github.com/rubysherpas/paranoia/pull/515) Switch from Travis CI to GitHub Actions
 
@@ -31,7 +40,7 @@
 
   [Jörg Schiller](https://github.com/joergschiller)
 
-* [#483](https://github.com/rubysherpas/paranoia/pull/483) Update JRuby version to 9.2.8.0 + remove EOL Ruby 2.2 
+* [#483](https://github.com/rubysherpas/paranoia/pull/483) Update JRuby version to 9.2.8.0 + remove EOL Ruby 2.2
 
   [Uwe Kubosch](https://github.com/donv)
 
