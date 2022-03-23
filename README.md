@@ -1,3 +1,6 @@
+[![Gem Version](https://badge.fury.io/rb/paranoia.svg)](https://badge.fury.io/rb/paranoia)
+[![build](https://github.com/rubysherpas/paranoia/actions/workflows/build.yml/badge.svg)](https://github.com/rubysherpas/paranoia/actions/workflows/build.yml)
+
 **Notice:** 
 
 `paranoia` has some surprising behaviour (like overriding ActiveRecord's `delete` and `destroy`) and is not recommended for new projects. See [`discard`'s README](https://github.com/jhawthorn/discard#why-not-paranoia-or-acts_as_paranoid) for more details.
