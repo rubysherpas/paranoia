@@ -20,7 +20,7 @@ if RUBY_ENGINE == 'rbx'
   end
 end
 
-rails = ENV['RAILS'] || '~> 5.2.0'
+rails = ENV['RAILS'] || '~> 6.0.4'
 
 if rails == 'edge'
   gem 'rails', github: 'rails/rails'
