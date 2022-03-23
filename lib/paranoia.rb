@@ -58,7 +58,7 @@ module Paranoia
   end
 
   def paranoia_destroy
-    transaction do
+    with_transaction_returning_status do
       run_callbacks(:destroy) do
         @_disable_counter_cache = deleted?
         result = paranoia_delete
@@ -129,21 +129,21 @@ module Paranoia
   def get_recovery_window_range(opts)
     return opts[:recovery_window_range] if opts[:recovery_window_range]
     return unless opts[:recovery_window]
-    (deleted_at - opts[:recovery_window]..deleted_at + opts[:recovery_window])
+    (deletion_time - opts[:recovery_window]..deletion_time + opts[:recovery_window])
   end
 
   def within_recovery_window?(recovery_window_range)
     return true unless recovery_window_range
-    recovery_window_range.cover?(deleted_at)
+    recovery_window_range.cover?(deletion_time)
   end
 
   def paranoia_destroyed?
-    send(paranoia_column) != paranoia_sentinel_value
+    paranoia_column_value != paranoia_sentinel_value
   end
   alias :deleted? :paranoia_destroyed?
 
   def really_destroy!
-    transaction do
+    with_transaction_returning_status do
       run_callbacks(:real_destroy) do
         @_disable_counter_cache = paranoia_destroyed?
         dependent_reflections = self.class.reflections.select do |name, reflection|
@@ -242,6 +242,12 @@ end
 ActiveSupport.on_load(:active_record) do
   class ActiveRecord::Base
     def self.acts_as_paranoid(options={})
+      if included_modules.include?(Paranoia)
+        puts "[WARN] #{self.name} is calling acts_as_paranoid more than once!"
+
+        return
+      end
+
       define_model_callbacks :restore, :real_destroy
 
       alias_method :really_destroyed?, :destroyed?
@@ -290,8 +296,16 @@ ActiveSupport.on_load(:active_record) do
       self.class.paranoia_column
     end
 
+    def paranoia_column_value
+      send(paranoia_column)
+    end
+
     def paranoia_sentinel_value
       self.class.paranoia_sentinel_value
+    end
+
+    def deletion_time
+      paranoia_column_value.acts_like?(:time) ? paranoia_column_value : deleted_at
     end
   end
 end
