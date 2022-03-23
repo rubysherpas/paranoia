@@ -32,6 +32,7 @@ def setup!
     'callback_models' => 'deleted_at DATETIME',
     'after_commit_callback_models' => 'deleted_at DATETIME',
     'fail_callback_models' => 'deleted_at DATETIME',
+    'association_with_abort_models' => 'deleted_at DATETIME',
     'related_models' => 'parent_model_id INTEGER, parent_model_with_counter_cache_column_id INTEGER, deleted_at DATETIME',
     'asplode_models' => 'parent_model_id INTEGER, deleted_at DATETIME',
     'employers' => 'name VARCHAR(32), deleted_at DATETIME',
@@ -141,6 +142,35 @@ class ParanoiaTest < test_framework
     assert model.instance_variable_get(:@destroy_callback_called)
     assert model.instance_variable_get(:@after_destroy_callback_called)
     assert model.instance_variable_get(:@after_commit_callback_called)
+  end
+
+  def test_destroy_behavior_for_association_with_abort
+    model = AssociationWithAbortModel.new
+    model.related_models.build
+    model.save
+
+    assert_equal model.reload.related_models.count, 1
+
+    model = AssociationWithAbortModel.find(model.id)
+    return_value = model.destroy
+
+    assert_equal return_value, false
+    assert_equal model.reload.related_models.count, 1
+  end
+
+  def test_destroy_bang_behavior_for_association_with_abort
+    model = AssociationWithAbortModel.new
+    model.related_models.build
+    model.save
+
+    assert_equal model.reload.related_models.count, 1
+
+    model = AssociationWithAbortModel.find(model.id)
+    assert_raises ActiveRecord::RecordNotDestroyed do
+      model.destroy!
+    end
+
+    assert_equal model.reload.related_models.count, 1
   end
 
   def test_destroy_behavior_for_freshly_loaded_plain_models_callbacks
@@ -1219,6 +1249,18 @@ class CallbackModel < ActiveRecord::Base
   def remove_called_variables
     instance_variables.each {|name| (name.to_s.end_with?('_called')) ? remove_instance_variable(name) : nil}
   end
+end
+
+class AssociationWithAbortModel < ActiveRecord::Base
+  acts_as_paranoid
+  has_many :related_models, class_name: 'RelatedModel', foreign_key: :parent_model_id, dependent: :destroy
+  before_destroy { |_|
+    if ActiveRecord::VERSION::MAJOR < 5
+      false
+    else
+      throw :abort
+    end
+  }
 end
 
 class AfterCommitCallbackModel < ActiveRecord::Base
