@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.license     = 'MIT'
   s.summary     = "Paranoia is a re-implementation of acts_as_paranoid for Rails 3, 4, and 5, using much, much, much less code."
   s.description = <<-DSC
-    Paranoia is a re-implementation of acts_as_paranoid for Rails 3, 4, and 5,
+    Paranoia is a re-implementation of acts_as_paranoid for Rails 4, 5, 6, and 7,
     using much, much, much less code. You would use either plugin / gem if you
     wished that when you called destroy on an Active Record object that it
     didn't actually destroy it, but just "hid" the record. Paranoia does this
@@ -22,14 +22,19 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = ">= 1.3.6"
 
-  s.required_ruby_version = '>= 2.0'
+  s.required_ruby_version = '>= 2.5'
 
-  s.add_dependency 'activerecord', '>= 4.0', '< 6.1'
+  s.add_dependency 'activerecord', '>= 5.1', '< 7.1'
 
   s.add_development_dependency "bundler", ">= 1.0.0"
   s.add_development_dependency "rake"
 
-  s.files        = `git ls-files`.split("\n")
+
+  s.files         = Dir.chdir(File.expand_path('..', __FILE__)) do
+    files = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)})  }
+    files
+  end
+
   s.executables  = `git ls-files`.split("\n").map{|f| f =~ /^bin\/(.*)/ ? $1 : nil}.compact
   s.require_path = 'lib'
 end
