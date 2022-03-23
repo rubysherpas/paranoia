@@ -138,7 +138,7 @@ module Paranoia
   end
 
   def paranoia_destroyed?
-    deletion_time != paranoia_sentinel_value
+    paranoia_column_value != paranoia_sentinel_value
   end
   alias :deleted? :paranoia_destroyed?
 
@@ -296,12 +296,16 @@ ActiveSupport.on_load(:active_record) do
       self.class.paranoia_column
     end
 
+    def paranoia_column_value
+      send(paranoia_column)
+    end
+
     def paranoia_sentinel_value
       self.class.paranoia_sentinel_value
     end
 
     def deletion_time
-      send(paranoia_column)
+      paranoia_column_value.acts_like?(:time) ? paranoia_column_value : deleted_at
     end
   end
 end
