@@ -1,5 +1,59 @@
 # paranoia Changelog
 
+## 2.5.3
+
+* [#532](https://github.com/rubysherpas/paranoia/pull/532) Fix: correct bug when sentinel_value is not a timestamp
+  [Hassanin Ahmed](https://github.com/sas1ni69)
+* [#531](https://github.com/rubysherpas/paranoia/pull/531) Added test case to reproduce bug introduce in v2.5.1
+  [Sherif Elkassaby](https://github.com/sherif-nedap)
+* [#529](https://github.com/rubysherpas/paranoia/pull/529) Fix: Do not define a RSpec matcher when RSpec isn't present
+  [Sebastian Welther](https://github.com/swelther)
+
+## 2.5.2
+
+* [#526](https://github.com/rubysherpas/paranoia/pull/526) Do not include tests files in packaged gem
+
+  [Jason Fleetwood-Boldt](https://github.com/jasonfb)
+* [#492](https://github.com/rubysherpas/paranoia/pull/492) Warn if acts_as_paranoid is called more than once on the same model
+
+  [Ignatius Reza](https://github.com/ignatiusreza)
+
+## 2.5.1
+
+* [#481](https://github.com/rubysherpas/paranoia/pull/481) Replaces hard coded `deleted_at` with `paranoia_column`.
+
+  [Hassanin Ahmed](https://github.com/sas1ni69)
+
+## 2.5.0
+
+ * [#516](https://github.com/rubysherpas/paranoia/pull/516) Add support for ActiveRecord 7.0, drop support for EOL Ruby < 2.5 and Rails < 5.1
+    adding support for Rails 7
+
+   [Mathieu Jobin](https://github.com/mathieujobin)
+ * [#515](https://github.com/rubysherpas/paranoia/pull/515) Switch from Travis CI to GitHub Actions
+
+   [Shinichi Maeshima](https://github.com/willnet)
+
+## 2.4.3
+
+* [#503](https://github.com/rubysherpas/paranoia/pull/503) Bump activerecord dependency for Rails 6.1
+
+  [Jörg Schiller](https://github.com/joergschiller)
+
+* [#483](https://github.com/rubysherpas/paranoia/pull/483) Update JRuby version to 9.2.8.0 + remove EOL Ruby 2.2
+
+  [Uwe Kubosch](https://github.com/donv)
+
+* [#482](https://github.com/rubysherpas/paranoia/pull/482) Fix after_commit for Rails 6
+
+  [Ashwin Hegde](https://github.com/hashwin)
+
+## 2.4.2
+
+* [#470](https://github.com/rubysherpas/paranoia/pull/470) Add support for ActiveRecord 6.0
+
+  [Anton Kolodii](https://github.com/iggant), [Jared Norman](https://github.com/jarednorman)
+
 ## 2.4.1
 
 * [#435](https://github.com/rubysherpas/paranoia/pull/435) Monkeypatch activerecord relations to work with rails 5.2.0
