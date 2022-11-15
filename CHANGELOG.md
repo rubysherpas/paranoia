@@ -1,5 +1,10 @@
 # paranoia Changelog
 
+## 2.6.1
+
+* [#535](https://github.com/rubysherpas/paranoia/pull/535) Allow to skip updating paranoia_destroy_attributes for records while really_destroy!
+  [Anton Bogdanov](https://github.com/kortirso)
+
 ## 2.6.0
 
 * [#512](https://github.com/rubysherpas/paranoia/pull/512) Quote table names; Mysql 8 has keywords that might match table names which cause an exception.

@@ -144,7 +144,7 @@ module Paranoia
   end
   alias :deleted? :paranoia_destroyed?
 
-  def really_destroy!
+  def really_destroy!(update_destroy_attributes: true)
     with_transaction_returning_status do
       run_callbacks(:real_destroy) do
         @_disable_counter_cache = paranoia_destroyed?
@@ -158,12 +158,14 @@ module Paranoia
             # .paranoid? will work for both instances and classes
             next unless association_data && association_data.paranoid?
             if reflection.collection?
-              next association_data.with_deleted.each(&:really_destroy!)
+              next association_data.with_deleted.find_each { |record|
+                record.really_destroy!(update_destroy_attributes: update_destroy_attributes)
+              }
             end
-            association_data.really_destroy!
+            association_data.really_destroy!(update_destroy_attributes: update_destroy_attributes)
           end
         end
-        update_columns(paranoia_destroy_attributes)
+        update_columns(paranoia_destroy_attributes) if update_destroy_attributes
         destroy_without_paranoia
       end
     end
