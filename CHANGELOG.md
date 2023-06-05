@@ -1,5 +1,10 @@
 # paranoia Changelog
 
+## 2.6.2
+
+* [#441](https://github.com/rubysherpas/paranoia/pull/441) Recursive restore with has_many/one through assocs (#441) 
+  [Emil Ong](https://github.com/emilong)
+
 ## 2.6.1
 
 * [#535](https://github.com/rubysherpas/paranoia/pull/535) Allow to skip updating paranoia_destroy_attributes for records while really_destroy!
