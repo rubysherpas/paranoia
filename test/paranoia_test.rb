@@ -391,14 +391,22 @@ class ParanoiaTest < test_framework
   end
 
   def test_sentinel_value_for_custom_sentinel_models
+    time_zero = if ActiveRecord::VERSION::MAJOR < 6
+      Time.new(0)
+    elsif ActiveRecord::VERSION::MAJOR == 6 && ActiveRecord::VERSION::MINOR < 1
+      Time.new(0)
+    else
+      DateTime.new(0)
+    end
+
     model = CustomSentinelModel.new
     assert_equal 0, model.class.count
     model.save!
-    assert_equal DateTime.new(0), model.deleted_at
+    assert_equal time_zero, model.deleted_at
     assert_equal 1, model.class.count
     model.destroy
 
-    assert DateTime.new(0) != model.deleted_at
+    assert time_zero != model.deleted_at
     assert model.paranoia_destroyed?
 
     assert_equal 0, model.class.count
@@ -407,7 +415,7 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.deleted.count
 
     model.restore
-    assert_equal DateTime.new(0), model.deleted_at
+    assert_equal time_zero, model.deleted_at
     assert !model.destroyed?
 
     assert_equal 1, model.class.count
