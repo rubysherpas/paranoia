@@ -23,8 +23,6 @@ jobs:
           # single test failure with jruby
           #- ruby: jruby-9.4
           #  rails: '~> 7.0.0'
-          - ruby: 2.7
-            rails: '~> 6.0.0'
           - ruby: 2.6
             rails: '~> 6.1.0'
           - ruby: 2.6
