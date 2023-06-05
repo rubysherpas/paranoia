@@ -49,7 +49,11 @@ def setup!
     'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
     'paranoid_model_with_belongs_to_active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN, active_column_model_with_has_many_relationship_id INTEGER',
     'active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
-    'without_default_scope_models' => 'deleted_at DATETIME'
+    'without_default_scope_models' => 'deleted_at DATETIME',
+    'paranoid_has_through_restore_parents' => 'deleted_at DATETIME',
+    'empty_paranoid_models' => 'deleted_at DATETIME',
+    'paranoid_has_one_throughs' => 'paranoid_has_through_restore_parent_id INTEGER NOT NULL, empty_paranoid_model_id INTEGER NOT NULL, deleted_at DATETIME',
+    'paranoid_has_many_throughs' => 'paranoid_has_through_restore_parent_id INTEGER NOT NULL, empty_paranoid_model_id INTEGER NOT NULL, deleted_at DATETIME',
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -387,14 +391,22 @@ class ParanoiaTest < test_framework
   end
 
   def test_sentinel_value_for_custom_sentinel_models
+    time_zero = if ActiveRecord::VERSION::MAJOR < 6
+      Time.new(0)
+    elsif ActiveRecord::VERSION::MAJOR == 6 && ActiveRecord::VERSION::MINOR < 1
+      Time.new(0)
+    else
+      DateTime.new(0)
+    end
+
     model = CustomSentinelModel.new
     assert_equal 0, model.class.count
     model.save!
-    assert_equal DateTime.new(0), model.deleted_at
+    assert_equal time_zero, model.deleted_at
     assert_equal 1, model.class.count
     model.destroy
 
-    assert DateTime.new(0) != model.deleted_at
+    assert time_zero != model.deleted_at
     assert model.paranoia_destroyed?
 
     assert_equal 0, model.class.count
@@ -403,7 +415,7 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.deleted.count
 
     model.restore
-    assert_equal DateTime.new(0), model.deleted_at
+    assert_equal time_zero, model.deleted_at
     assert !model.destroyed?
 
     assert_equal 1, model.class.count
@@ -1055,6 +1067,40 @@ class ParanoiaTest < test_framework
     assert_equal 1, polymorphic.class.count
   end
 
+  def test_recursive_restore_with_has_through_associations
+    parent = ParanoidHasThroughRestoreParent.create
+    one = EmptyParanoidModel.create
+    ParanoidHasOneThrough.create(
+      :paranoid_has_through_restore_parent => parent,
+      :empty_paranoid_model => one,
+    )
+    many = Array.new(3) do
+      many = EmptyParanoidModel.create
+      ParanoidHasManyThrough.create(
+        :paranoid_has_through_restore_parent => parent,
+        :empty_paranoid_model => many,
+      )
+
+      many
+    end
+
+    assert_equal true, parent.empty_paranoid_model.present?
+    assert_equal 3, parent.empty_paranoid_models.count
+
+    parent.destroy
+
+    assert_equal true, parent.empty_paranoid_model.reload.deleted?
+    assert_equal 0, parent.empty_paranoid_models.count
+
+    parent = ParanoidHasThroughRestoreParent.with_deleted.first
+    parent.restore(recursive: true)
+
+    assert_equal false, parent.empty_paranoid_model.deleted?
+    assert_equal one, parent.empty_paranoid_model
+    assert_equal 3, parent.empty_paranoid_models.count
+    assert_equal many, parent.empty_paranoid_models
+  end
+
   # Ensure that we're checking parent_type when restoring
   def test_missing_restore_recursive_on_polymorphic_has_one_association
     parent = ParentModel.create
@@ -1554,4 +1600,30 @@ module Namespaced
     acts_as_paranoid
     belongs_to :paranoid_has_one
   end
+end
+
+class ParanoidHasThroughRestoreParent < ActiveRecord::Base
+  acts_as_paranoid
+
+  has_one :paranoid_has_one_through, dependent: :destroy
+  has_one :empty_paranoid_model, through: :paranoid_has_one_through, dependent: :destroy
+
+  has_many :paranoid_has_many_throughs, dependent: :destroy
+  has_many :empty_paranoid_models, through: :paranoid_has_many_throughs, dependent: :destroy
+end
+
+class EmptyParanoidModel < ActiveRecord::Base
+  acts_as_paranoid
+end
+
+class ParanoidHasOneThrough < ActiveRecord::Base
+  acts_as_paranoid
+  belongs_to :paranoid_has_through_restore_parent
+  belongs_to :empty_paranoid_model, dependent: :destroy
+end
+
+class ParanoidHasManyThrough < ActiveRecord::Base
+  acts_as_paranoid
+  belongs_to :paranoid_has_through_restore_parent
+  belongs_to :empty_paranoid_model, dependent: :destroy
 end

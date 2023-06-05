@@ -40,7 +40,7 @@ module Paranoia
       # these will not match != sentinel value because "NULL != value" is
       # NULL under the sql standard
       # Scoping with the table_name is mandatory to avoid ambiguous errors when joining tables.
-      scoped_quoted_paranoia_column = "#{self.table_name}.#{connection.quote_column_name(paranoia_column)}"
+      scoped_quoted_paranoia_column = "#{connection.quote_table_name(self.table_name)}.#{connection.quote_column_name(paranoia_column)}"
       with_deleted.where("#{scoped_quoted_paranoia_column} IS NULL OR #{scoped_quoted_paranoia_column} != ?", paranoia_sentinel_value)
     end
     alias_method :deleted, :only_deleted
@@ -144,7 +144,7 @@ module Paranoia
   end
   alias :deleted? :paranoia_destroyed?
 
-  def really_destroy!
+  def really_destroy!(update_destroy_attributes: true)
     with_transaction_returning_status do
       run_callbacks(:real_destroy) do
         @_disable_counter_cache = paranoia_destroyed?
@@ -158,12 +158,14 @@ module Paranoia
             # .paranoid? will work for both instances and classes
             next unless association_data && association_data.paranoid?
             if reflection.collection?
-              next association_data.with_deleted.each(&:really_destroy!)
+              next association_data.with_deleted.find_each { |record|
+                record.really_destroy!(update_destroy_attributes: update_destroy_attributes)
+              }
             end
-            association_data.really_destroy!
+            association_data.really_destroy!(update_destroy_attributes: update_destroy_attributes)
           end
         end
-        update_columns(paranoia_destroy_attributes)
+        update_columns(paranoia_destroy_attributes) if update_destroy_attributes
         destroy_without_paranoia
       end
     end
@@ -215,7 +217,12 @@ module Paranoia
 
       if association_data.nil? && association.macro.to_s == "has_one"
         association_class_name = association.klass.name
-        association_foreign_key = association.foreign_key
+
+        association_foreign_key = if association.options[:through].present?
+          association.klass.primary_key
+        else
+          association.foreign_key
+        end
 
         if association.type
           association_polymorphic_type = association.type
@@ -224,7 +231,7 @@ module Paranoia
           association_find_conditions = { association_foreign_key => self.id }
         end
 
-        association_class = association_class_name.constantize
+        association_class = association.klass
         if association_class.paranoid?
           association_class.only_deleted.where(association_find_conditions).first
             .try!(:restore, recursive: true, :recovery_window_range => recovery_window_range)

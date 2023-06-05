@@ -1,5 +1,23 @@
 # paranoia Changelog
 
+## 2.6.2
+
+* [#441](https://github.com/rubysherpas/paranoia/pull/441) Recursive restore with has_many/one through assocs (#441) 
+  [Emil Ong](https://github.com/emilong)
+
+## 2.6.1
+
+* [#535](https://github.com/rubysherpas/paranoia/pull/535) Allow to skip updating paranoia_destroy_attributes for records while really_destroy!
+  [Anton Bogdanov](https://github.com/kortirso)
+
+## 2.6.0
+
+* [#512](https://github.com/rubysherpas/paranoia/pull/512) Quote table names; Mysql 8 has keywords that might match table names which cause an exception.
+* [#476](https://github.com/rubysherpas/paranoia/pull/476) Fix syntax error in documentation.
+* [#485](https://github.com/rubysherpas/paranoia/pull/485) Rollback transaction if destroy aborted.
+* [#522](https://github.com/rubysherpas/paranoia/pull/522) Add failing tests for association with abort on destroy.
+* [#513](https://github.com/rubysherpas/paranoia/pull/513) Fix create callback called on destroy.
+
 ## 2.5.3
 
 * [#532](https://github.com/rubysherpas/paranoia/pull/532) Fix: correct bug when sentinel_value is not a timestamp
