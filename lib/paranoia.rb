@@ -223,11 +223,11 @@ module Paranoia
           association.foreign_key
         end
 
-        if association.type
+        association_find_conditions = if association.type
           association_polymorphic_type = association.type
-          association_find_conditions = { association_polymorphic_type => self.class.name.to_s, association_foreign_key => self.id }
+          { association_polymorphic_type => self.class.name.to_s, association_foreign_key => self.id }
         else
-          association_find_conditions = { association_foreign_key => self.id }
+          { association_foreign_key => self.id }
         end
 
         association_class = association.klass
