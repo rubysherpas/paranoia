@@ -3,7 +3,7 @@ require 'active_record'
 require 'minitest/autorun'
 require 'paranoia'
 
-test_framework = defined?(MiniTest::Test) ? MiniTest::Test : MiniTest::Unit::TestCase
+test_framework = defined?(Minitest::Test) ? Minitest::Test : Minitest::Unit::TestCase
 
 if ActiveRecord::Base.respond_to?(:raise_in_transactional_callbacks=)
   ActiveRecord::Base.raise_in_transactional_callbacks = true
