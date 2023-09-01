@@ -1,3 +1,12 @@
+[![Gem Version](https://badge.fury.io/rb/paranoia.svg)](https://badge.fury.io/rb/paranoia)
+[![build](https://github.com/rubysherpas/paranoia/actions/workflows/build.yml/badge.svg)](https://github.com/rubysherpas/paranoia/actions/workflows/build.yml)
+
+**Notice:**
+
+`paranoia` has some surprising behaviour (like overriding ActiveRecord's `delete` and `destroy`) and is not recommended for new projects. See [`discard`'s README](https://github.com/jhawthorn/discard#why-not-paranoia-or-acts_as_paranoid) for more details.
+
+Paranoia will continue to accept bug fixes and support new versions of Rails but isn't accepting new features.
+
 # Paranoia
 
 Paranoia is a re-implementation of [acts\_as\_paranoid](http://github.com/ActsAsParanoid/acts_as_paranoid) for Rails 3/4/5, using much, much, much less code.
@@ -94,6 +103,14 @@ If you really want it gone *gone*, call `really_destroy!`:
 # => client
 ```
 
+If you need skip updating timestamps for deleting records, call `really_destroy!(update_destroy_attributes: false)`.
+When we call `really_destroy!(update_destroy_attributes: false)` on the parent `client`, then each child `email` will also have `really_destroy!(update_destroy_attributes: false)` called.
+
+``` ruby
+>> client.really_destroy!(update_destroy_attributes: false)
+# => client
+```
+
 If you want to use a column other than `deleted_at`, you can pass it as an option:
 
 ``` ruby
@@ -180,6 +197,21 @@ Client.restore(id, :recursive => true)
 # or
 client.restore(:recursive => true)
 ```
+
+If you want to restore a record and only those dependently destroyed associated records that were deleted within 2 minutes of the object upon which they depend:
+
+``` ruby
+Client.restore(id, :recursive => true, :recovery_window => 2.minutes)
+# or
+client.restore(:recursive => true, :recovery_window => 2.minutes)
+```
+
+Note that by default paranoia will not prevent that a soft destroyed object can't be associated with another object of a different model.
+A Rails validator is provided should you require this functionality:
+  ``` ruby
+validates :some_assocation, association_not_soft_destroyed: true
+```
+This validator makes sure that `some_assocation` is not soft destroyed. If the object is soft destroyed the main object is rendered invalid and an validation error is added.
 
 For more information, please look at the tests.
 

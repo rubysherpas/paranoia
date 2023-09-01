@@ -3,7 +3,11 @@ require 'active_record'
 require 'minitest/autorun'
 require 'paranoia'
 
-test_framework = defined?(MiniTest::Test) ? MiniTest::Test : MiniTest::Unit::TestCase
+test_framework = defined?(Minitest::Test) ? Minitest::Test : Minitest::Unit::TestCase
+
+if ActiveRecord::Base.respond_to?(:raise_in_transactional_callbacks=)
+  ActiveRecord::Base.raise_in_transactional_callbacks = true
+end
 
 def connect!
   ActiveRecord::Base.establish_connection :adapter => 'sqlite3', database: ':memory:'
@@ -21,11 +25,14 @@ def setup!
     'paranoid_model_with_foreign_key_belongs' => 'parent_model_id INTEGER, deleted_at DATETIME, has_one_foreign_key_id INTEGER',
     'paranoid_model_with_timestamps' => 'parent_model_id INTEGER, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME',
     'not_paranoid_model_with_belongs' => 'parent_model_id INTEGER, paranoid_model_with_has_one_id INTEGER',
+    'not_paranoid_model_with_belongs_and_assocation_not_soft_destroyed_validator' => 'parent_model_id INTEGER, paranoid_model_with_has_one_id INTEGER',
     'paranoid_model_with_has_one_and_builds' => 'parent_model_id INTEGER, color VARCHAR(32), deleted_at DATETIME, has_one_foreign_key_id INTEGER',
     'featureful_models' => 'deleted_at DATETIME, name VARCHAR(32)',
     'plain_models' => 'deleted_at DATETIME',
     'callback_models' => 'deleted_at DATETIME',
+    'after_commit_callback_models' => 'deleted_at DATETIME',
     'fail_callback_models' => 'deleted_at DATETIME',
+    'association_with_abort_models' => 'deleted_at DATETIME',
     'related_models' => 'parent_model_id INTEGER, parent_model_with_counter_cache_column_id INTEGER, deleted_at DATETIME',
     'asplode_models' => 'parent_model_id INTEGER, deleted_at DATETIME',
     'employers' => 'name VARCHAR(32), deleted_at DATETIME',
@@ -38,9 +45,15 @@ def setup!
     'namespaced_paranoid_has_ones' => 'deleted_at DATETIME, paranoid_belongs_tos_id INTEGER',
     'namespaced_paranoid_belongs_tos' => 'deleted_at DATETIME, paranoid_has_one_id INTEGER',
     'unparanoid_unique_models' => 'name VARCHAR(32), paranoid_with_unparanoids_id INTEGER',
-    'active_column_models' => 'deleted_at DATETIME, active BOOLEAN',
+    'active_column_models' => 'paranoid_model_id INTEGER, deleted_at DATETIME, active BOOLEAN',
     'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
-    'without_default_scope_models' => 'deleted_at DATETIME'
+    'paranoid_model_with_belongs_to_active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN, active_column_model_with_has_many_relationship_id INTEGER',
+    'active_column_model_with_has_many_relationships' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
+    'without_default_scope_models' => 'deleted_at DATETIME',
+    'paranoid_has_through_restore_parents' => 'deleted_at DATETIME',
+    'empty_paranoid_models' => 'deleted_at DATETIME',
+    'paranoid_has_one_throughs' => 'paranoid_has_through_restore_parent_id INTEGER NOT NULL, empty_paranoid_model_id INTEGER NOT NULL, deleted_at DATETIME',
+    'paranoid_has_many_throughs' => 'paranoid_has_through_restore_parent_id INTEGER NOT NULL, empty_paranoid_model_id INTEGER NOT NULL, deleted_at DATETIME',
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -74,6 +87,17 @@ class ParanoiaTest < test_framework
 
   def test_paranoid_model_class_is_paranoid
     assert_equal true, ParanoidModel.paranoid?
+  end
+
+  def test_doubly_paranoid_model_class_is_warned
+    assert_output(/DoublyParanoidModel is calling acts_as_paranoid more than once!/) do
+      DoublyParanoidModel.acts_as_paranoid
+    end
+
+    refute_equal(
+      DoublyParanoidModel.instance_method(:destroy).source_location,
+      DoublyParanoidModel.instance_method(:destroy_without_paranoia).source_location
+    )
   end
 
   def test_plain_models_are_not_paranoid
@@ -115,15 +139,73 @@ class ParanoiaTest < test_framework
     model.remove_called_variables     # clear called callback flags
     model.destroy
 
-    assert_equal nil, model.instance_variable_get(:@update_callback_called)
-    assert_equal nil, model.instance_variable_get(:@save_callback_called)
-    assert_equal nil, model.instance_variable_get(:@validate_called)
+    assert_nil model.instance_variable_get(:@update_callback_called)
+    assert_nil model.instance_variable_get(:@save_callback_called)
+    assert_nil model.instance_variable_get(:@validate_called)
 
     assert model.instance_variable_get(:@destroy_callback_called)
     assert model.instance_variable_get(:@after_destroy_callback_called)
     assert model.instance_variable_get(:@after_commit_callback_called)
   end
 
+  def test_destroy_behavior_for_association_with_abort
+    model = AssociationWithAbortModel.new
+    model.related_models.build
+    model.save
+
+    assert_equal model.reload.related_models.count, 1
+
+    model = AssociationWithAbortModel.find(model.id)
+    return_value = model.destroy
+
+    assert_equal return_value, false
+    assert_equal model.reload.related_models.count, 1
+  end
+
+  def test_destroy_bang_behavior_for_association_with_abort
+    model = AssociationWithAbortModel.new
+    model.related_models.build
+    model.save
+
+    assert_equal model.reload.related_models.count, 1
+
+    model = AssociationWithAbortModel.find(model.id)
+    assert_raises ActiveRecord::RecordNotDestroyed do
+      model.destroy!
+    end
+
+    assert_equal model.reload.related_models.count, 1
+  end
+
+  def test_destroy_behavior_for_freshly_loaded_plain_models_callbacks
+    model = CallbackModel.new
+    model.save
+
+    model = CallbackModel.find(model.id)
+    model.destroy
+
+    assert_nil model.instance_variable_get(:@update_callback_called)
+    assert_nil model.instance_variable_get(:@save_callback_called)
+    assert_nil model.instance_variable_get(:@validate_called)
+
+    assert model.instance_variable_get(:@destroy_callback_called)
+    assert model.instance_variable_get(:@after_destroy_callback_called)
+    assert model.instance_variable_get(:@after_commit_callback_called)
+  end
+
+  def test_destroy_behavior_for_freshly_saved_models_after_commit_callbacks
+    model = AfterCommitCallbackModel.create!
+
+    assert_equal 1, model.after_create_commit_called_times
+    assert_equal 0, model.after_destroy_commit_called_times
+
+    # clear the counters, but do not reload from DB
+    model.remove_called_variables
+
+    model.destroy
+    assert_equal 0, model.after_create_commit_called_times
+    assert_equal 1, model.after_destroy_commit_called_times
+  end
 
   def test_delete_behavior_for_plain_models_callbacks
     model = CallbackModel.new
@@ -131,12 +213,12 @@ class ParanoiaTest < test_framework
     model.remove_called_variables     # clear called callback flags
     model.delete
 
-    assert_equal nil, model.instance_variable_get(:@update_callback_called)
-    assert_equal nil, model.instance_variable_get(:@save_callback_called)
-    assert_equal nil, model.instance_variable_get(:@validate_called)
-    assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
-    assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
-    assert_equal nil, model.instance_variable_get(:@after_commit_callback_called)
+    assert_nil model.instance_variable_get(:@update_callback_called)
+    assert_nil model.instance_variable_get(:@save_callback_called)
+    assert_nil model.instance_variable_get(:@validate_called)
+    assert_nil model.instance_variable_get(:@destroy_callback_called)
+    assert_nil model.instance_variable_get(:@after_destroy_callback_called)
+    assert_nil model.instance_variable_get(:@after_commit_callback_called)
   end
 
   def test_delete_in_transaction_behavior_for_plain_models_callbacks
@@ -147,11 +229,11 @@ class ParanoiaTest < test_framework
       model.delete
     end
 
-    assert_equal nil, model.instance_variable_get(:@update_callback_called)
-    assert_equal nil, model.instance_variable_get(:@save_callback_called)
-    assert_equal nil, model.instance_variable_get(:@validate_called)
-    assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
-    assert_equal nil, model.instance_variable_get(:@after_destroy_callback_called)
+    assert_nil model.instance_variable_get(:@update_callback_called)
+    assert_nil model.instance_variable_get(:@save_callback_called)
+    assert_nil model.instance_variable_get(:@validate_called)
+    assert_nil model.instance_variable_get(:@destroy_callback_called)
+    assert_nil model.instance_variable_get(:@after_destroy_callback_called)
     assert model.instance_variable_get(:@after_commit_callback_called)
   end
 
@@ -189,14 +271,53 @@ class ParanoiaTest < test_framework
     p2 = ParanoidModel.create(:parent_model => parent2)
     p1.destroy
     p2.destroy
+
     assert_equal 0, parent1.paranoid_models.count
     assert_equal 1, parent1.paranoid_models.only_deleted.count
+
+    assert_equal 2, ParanoidModel.only_deleted.joins(:parent_model).count
     assert_equal 1, parent1.paranoid_models.deleted.count
     assert_equal 0, parent1.paranoid_models.without_deleted.count
     p3 = ParanoidModel.create(:parent_model => parent1)
     assert_equal 2, parent1.paranoid_models.with_deleted.count
     assert_equal 1, parent1.paranoid_models.without_deleted.count
     assert_equal [p1,p3], parent1.paranoid_models.with_deleted
+  end
+
+  def test_paranoid_model_has_many_active_column_model
+    parent1 = ParentModel.create
+    p1 = ParanoidModel.create(:parent_model => parent1)
+    acm1 = ActiveColumnModel.create(paranoid_model: p1)
+
+    assert_nil p1.reload.deleted_at
+    assert_equal 1, p1.active_column_models.count
+    assert_equal true, acm1.active
+    assert_nil acm1.deleted_at
+
+    p1.destroy
+
+    assert p1.reload.deleted_at != nil
+    assert_equal 0, p1.active_column_models.count
+    assert_nil acm1.reload.active
+    assert acm1.reload.deleted_at != nil
+
+    p1.restore(recursive: true, recovery_window: 10.minutes)
+
+    assert_nil p1.reload.deleted_at
+    assert_equal 1, p1.active_column_models.count
+    assert_equal true, acm1.reload.active
+    assert_nil acm1.reload.deleted_at
+  end
+
+  def test_only_deleted_with_joins
+    c1 = ActiveColumnModelWithHasManyRelationship.create(name: 'Jacky')
+    c2 = ActiveColumnModelWithHasManyRelationship.create(name: 'Thomas')
+    p1 = ParanoidModelWithBelongsToActiveColumnModelWithHasManyRelationship.create(name: 'Hello', active_column_model_with_has_many_relationship: c1)
+
+    c1.destroy
+    assert_equal 1, ActiveColumnModelWithHasManyRelationship.count
+    assert_equal 1, ActiveColumnModelWithHasManyRelationship.only_deleted.count
+    assert_equal 1, ActiveColumnModelWithHasManyRelationship.only_deleted.joins(:paranoid_model_with_belongs_to_active_column_model_with_has_many_relationships).count
   end
 
   def test_destroy_behavior_for_custom_column_models
@@ -223,8 +344,24 @@ class ParanoiaTest < test_framework
     assert_equal record.previous_changes.keys, ["destroyed_at"]
   end
 
+  def test_destroy_behavior_for_custom_column_models_with_recovery_options
+    model = CustomColumnModel.new
+    model.save!
+
+    assert_nil model.destroyed_at
+
+    model.destroy
+
+    assert_equal false, model.destroyed_at.nil?
+    assert model.paranoia_destroyed?
+
+    model.restore!(recovery_window: 2.minutes)
+
+    assert_equal 1, model.class.count
+  end
+
   def test_default_sentinel_value
-    assert_equal nil, ParanoidModel.paranoia_sentinel_value
+    assert_nil ParanoidModel.paranoia_sentinel_value
   end
 
   def test_without_default_scope_option
@@ -274,14 +411,22 @@ class ParanoiaTest < test_framework
   end
 
   def test_sentinel_value_for_custom_sentinel_models
+    time_zero = if ActiveRecord::VERSION::MAJOR < 6
+      Time.new(0)
+    elsif ActiveRecord::VERSION::MAJOR == 6 && ActiveRecord::VERSION::MINOR < 1
+      Time.new(0)
+    else
+      DateTime.new(0)
+    end
+
     model = CustomSentinelModel.new
     assert_equal 0, model.class.count
     model.save!
-    assert_equal DateTime.new(0), model.deleted_at
+    assert_equal time_zero, model.deleted_at
     assert_equal 1, model.class.count
     model.destroy
 
-    assert DateTime.new(0) != model.deleted_at
+    assert time_zero != model.deleted_at
     assert model.paranoia_destroyed?
 
     assert_equal 0, model.class.count
@@ -290,7 +435,7 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.deleted.count
 
     model.restore
-    assert_equal DateTime.new(0), model.deleted_at
+    assert_equal time_zero, model.deleted_at
     assert !model.destroyed?
 
     assert_equal 1, model.class.count
@@ -379,7 +524,7 @@ class ParanoiaTest < test_framework
     model = CallbackModel.new
     model.save
     model.delete
-    assert_equal nil, model.instance_variable_get(:@destroy_callback_called)
+    assert_nil model.instance_variable_get(:@destroy_callback_called)
   end
 
   def test_destroy_behavior_for_callbacks
@@ -533,6 +678,16 @@ class ParanoiaTest < test_framework
     refute NonParanoidModel.unscoped.exists?(child3.id)
   end
 
+  def test_not_destroy_child_if_abort_destroy
+    parent = ParentModel.create
+    child = parent.very_related_models.create
+    parent.destroy_unavailable = true
+    parent.destroy
+
+    assert_nil parent.reload.deleted_at, "Parent must be not deleted"
+    assert_nil child.reload.deleted_at, "Child must be not deleted"
+  end
+
   def test_real_destroy_dependent_destroy_after_normal_destroy
     parent = ParentModel.create
     child = parent.very_related_models.create
@@ -558,6 +713,14 @@ class ParanoiaTest < test_framework
     model.really_destroy!
 
     assert model.instance_variable_get(:@real_destroy_callback_called)
+  end
+
+  def test_really_destroy_behavior_for_active_column_model
+    model = ActiveColumnModel.new
+    model.save
+    model.really_destroy!
+
+    refute ParanoidModel.unscoped.exists?(model.id)
   end
 
   def test_really_delete
@@ -593,6 +756,38 @@ class ParanoiaTest < test_framework
     refute a.paranoia_destroyed?
     assert b.paranoia_destroyed?
     refute c.paranoia_destroyed?
+  end
+
+  def test_restore_with_associations_using_recovery_window
+    parent = ParentModel.create
+    first_child = parent.very_related_models.create
+    second_child = parent.very_related_models.create
+
+    parent.destroy
+    second_child.update(deleted_at: parent.deleted_at + 11.minutes)
+
+    parent.restore!(:recursive => true)
+    assert_equal true, parent.deleted_at.nil?
+    assert_equal true, first_child.reload.deleted_at.nil?
+    assert_equal true, second_child.reload.deleted_at.nil?
+
+    parent.destroy
+    second_child.update(deleted_at: parent.deleted_at + 11.minutes)
+
+    parent.restore(:recursive => true, :recovery_window => 10.minutes)
+    assert_equal true, parent.deleted_at.nil?
+    assert_equal true, first_child.reload.deleted_at.nil?
+    assert_equal false, second_child.reload.deleted_at.nil?
+
+    second_child.restore
+    parent.destroy
+    first_child.update(deleted_at: parent.deleted_at - 11.minutes)
+    second_child.update(deleted_at: parent.deleted_at - 9.minutes)
+
+    ParentModel.restore(parent.id, :recursive => true, :recovery_window => 10.minutes)
+    assert_equal true, parent.reload.deleted_at.nil?
+    assert_equal false, first_child.reload.deleted_at.nil?
+    assert_equal true, second_child.reload.deleted_at.nil?
   end
 
   def test_restore_with_associations
@@ -805,6 +1000,13 @@ class ParanoiaTest < test_framework
     refute b.valid?
   end
 
+  def test_updated_at_modification_on_destroy
+    paranoid_model = ParanoidModelWithTimestamp.create(:parent_model => ParentModel.create, :updated_at => 1.day.ago)
+    assert paranoid_model.updated_at < 10.minutes.ago
+    paranoid_model.destroy
+    assert paranoid_model.updated_at > 10.minutes.ago
+  end
+
   def test_updated_at_modification_on_restore
     parent1 = ParentModel.create
     pt1 = ParanoidModelWithTimestamp.create(:parent_model => parent1)
@@ -896,6 +1098,40 @@ class ParanoiaTest < test_framework
     assert_equal 1, polymorphic.class.count
   end
 
+  def test_recursive_restore_with_has_through_associations
+    parent = ParanoidHasThroughRestoreParent.create
+    one = EmptyParanoidModel.create
+    ParanoidHasOneThrough.create(
+      :paranoid_has_through_restore_parent => parent,
+      :empty_paranoid_model => one,
+    )
+    many = Array.new(3) do
+      many = EmptyParanoidModel.create
+      ParanoidHasManyThrough.create(
+        :paranoid_has_through_restore_parent => parent,
+        :empty_paranoid_model => many,
+      )
+
+      many
+    end
+
+    assert_equal true, parent.empty_paranoid_model.present?
+    assert_equal 3, parent.empty_paranoid_models.count
+
+    parent.destroy
+
+    assert_equal true, parent.empty_paranoid_model.reload.deleted?
+    assert_equal 0, parent.empty_paranoid_models.count
+
+    parent = ParanoidHasThroughRestoreParent.with_deleted.first
+    parent.restore(recursive: true)
+
+    assert_equal false, parent.empty_paranoid_model.deleted?
+    assert_equal one, parent.empty_paranoid_model
+    assert_equal 3, parent.empty_paranoid_models.count
+    assert_equal many, parent.empty_paranoid_models
+  end
+
   # Ensure that we're checking parent_type when restoring
   def test_missing_restore_recursive_on_polymorphic_has_one_association
     parent = ParentModel.create
@@ -924,8 +1160,8 @@ class ParanoiaTest < test_framework
     parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
     related_model = parent_model_with_counter_cache_column.related_models.create
 
-    assert_equal nil, related_model.instance_variable_get(:@after_destroy_callback_called)
-    assert_equal nil, related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+    assert_nil related_model.instance_variable_get(:@after_destroy_callback_called)
+    assert_nil related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
 
     related_model.destroy
 
@@ -938,6 +1174,18 @@ class ParanoiaTest < test_framework
     related = parent_model.unparanoid_unique_models.create
     # will raise exception if model is not checked for paranoia
     related.valid?
+  end
+
+  def test_assocation_not_soft_destroyed_validator
+    notParanoidModel = NotParanoidModelWithBelongsAndAssocationNotSoftDestroyedValidator.create
+    parentModel = ParentModel.create
+    assert notParanoidModel.valid?
+
+    notParanoidModel.parent_model = parentModel
+    assert notParanoidModel.valid?
+    parentModel.destroy
+    assert !notParanoidModel.valid?
+    assert notParanoidModel.errors.full_messages.include? "Parent model has been soft-deleted"
   end
 
   # TODO: find a fix for Rails 4.1
@@ -958,13 +1206,51 @@ class ParanoiaTest < test_framework
       parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
       related_model = parent_model_with_counter_cache_column.related_models.create
 
-      assert_equal nil, related_model.instance_variable_get(:@after_destroy_callback_called)
-      assert_equal nil, related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+      assert_nil related_model.instance_variable_get(:@after_destroy_callback_called)
+      assert_nil related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
 
       related_model.really_destroy!
 
       assert related_model.instance_variable_get(:@after_destroy_callback_called)
       assert related_model.instance_variable_get(:@after_commit_on_destroy_callback_called)
+    end
+
+    def test_counter_cache_column_on_double_destroy
+      parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+      related_model = parent_model_with_counter_cache_column.related_models.create
+
+      related_model.destroy
+      related_model.destroy
+      assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+    end
+
+    def test_counter_cache_column_on_double_restore
+      parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+      related_model = parent_model_with_counter_cache_column.related_models.create
+
+      related_model.destroy
+      related_model.restore
+      related_model.restore
+      assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
+    end
+
+    def test_counter_cache_column_on_destroy_and_really_destroy
+      parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+      related_model = parent_model_with_counter_cache_column.related_models.create
+
+      related_model.destroy
+      related_model.really_destroy!
+      assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+    end
+
+    def test_counter_cache_column_on_restore
+      parent_model_with_counter_cache_column = ParentModelWithCounterCacheColumn.create
+      related_model = parent_model_with_counter_cache_column.related_models.create
+
+      related_model.destroy
+      assert_equal 0, parent_model_with_counter_cache_column.reload.related_models_count
+      related_model.restore
+      assert_equal 1, parent_model_with_counter_cache_column.reload.related_models_count
     end
   end
 
@@ -977,7 +1263,15 @@ end
 # Helper classes
 
 class ParanoidModel < ActiveRecord::Base
+  acts_as_paranoid
   belongs_to :parent_model
+
+  has_many :active_column_models, dependent: :destroy
+
+end
+
+class DoublyParanoidModel < ActiveRecord::Base
+  self.table_name = 'plain_models'
   acts_as_paranoid
 end
 
@@ -1034,15 +1328,66 @@ class CallbackModel < ActiveRecord::Base
   end
 end
 
-class ParentModel < ActiveRecord::Base
+class AssociationWithAbortModel < ActiveRecord::Base
   acts_as_paranoid
-  has_many :paranoid_models
+  has_many :related_models, class_name: 'RelatedModel', foreign_key: :parent_model_id, dependent: :destroy
+  before_destroy { |_|
+    if ActiveRecord::VERSION::MAJOR < 5
+      false
+    else
+      throw :abort
+    end
+  }
+end
+
+class AfterCommitCallbackModel < ActiveRecord::Base
+  acts_as_paranoid
+
+  after_commit :increment_after_create_commit_called_times, on: :create
+  after_commit :increment_after_destroy_commit_called_times, on: :destroy
+
+  def increment_after_create_commit_called_times
+    @after_create_commit_called_times = after_create_commit_called_times + 1
+  end
+
+  def increment_after_destroy_commit_called_times
+    @after_destroy_commit_called_times = after_destroy_commit_called_times + 1
+  end
+
+  def after_create_commit_called_times
+    @after_create_commit_called_times || 0
+  end
+
+  def after_destroy_commit_called_times
+    @after_destroy_commit_called_times || 0
+  end
+
+  def remove_called_variables
+    instance_variables.each {|name| (name.to_s.end_with?('_called_times')) ? remove_instance_variable(name) : nil}
+  end
+end
+
+class ParentModel < ActiveRecord::Base
+  attr_accessor :destroy_unavailable
+  acts_as_paranoid
+  has_many :paranoid_models, dependent: :destroy
   has_many :related_models
   has_many :very_related_models, :class_name => 'RelatedModel', dependent: :destroy
   has_many :non_paranoid_models, dependent: :destroy
   has_one :non_paranoid_model, dependent: :destroy
   has_many :asplode_models, dependent: :destroy
   has_one :polymorphic_model, as: :parent, dependent: :destroy
+  before_destroy :validate_destroy
+
+  def validate_destroy
+    return unless self.destroy_unavailable
+
+    if ActiveRecord::VERSION::MAJOR < 5
+      false
+    else
+      throw :abort
+    end
+  end
 end
 
 class ParentModelWithCounterCacheColumn < ActiveRecord::Base
@@ -1099,8 +1444,11 @@ class WithoutDefaultScopeModel < ActiveRecord::Base
   acts_as_paranoid without_default_scope: true
 end
 
+
 class ActiveColumnModel < ActiveRecord::Base
   acts_as_paranoid column: :active, sentinel_value: true
+
+  belongs_to :paranoid_model
 
   def paranoia_restore_attributes
     {
@@ -1119,6 +1467,45 @@ end
 
 class ActiveColumnModelWithUniquenessValidation < ActiveRecord::Base
   validates :name, :uniqueness => true
+  acts_as_paranoid column: :active, sentinel_value: true
+
+  def paranoia_restore_attributes
+    {
+      deleted_at: nil,
+      active: true
+    }
+  end
+
+  def paranoia_destroy_attributes
+    {
+      deleted_at: current_time_from_proper_timezone,
+      active: nil
+    }
+  end
+end
+
+class ActiveColumnModelWithHasManyRelationship < ActiveRecord::Base
+  has_many :paranoid_model_with_belongs_to_active_column_model_with_has_many_relationships
+  acts_as_paranoid column: :active, sentinel_value: true
+
+  def paranoia_restore_attributes
+    {
+      deleted_at: nil,
+      active: true
+    }
+  end
+
+  def paranoia_destroy_attributes
+    {
+      deleted_at: current_time_from_proper_timezone,
+      active: nil
+    }
+  end
+end
+
+class ParanoidModelWithBelongsToActiveColumnModelWithHasManyRelationship < ActiveRecord::Base
+  belongs_to :active_column_model_with_has_many_relationship
+
   acts_as_paranoid column: :active, sentinel_value: true
 
   def paranoia_restore_attributes
@@ -1202,6 +1589,11 @@ class NotParanoidModelWithBelong < ActiveRecord::Base
   belongs_to :paranoid_model_with_has_one
 end
 
+class NotParanoidModelWithBelongsAndAssocationNotSoftDestroyedValidator < NotParanoidModelWithBelong
+    belongs_to :parent_model
+    validates :parent_model, association_not_soft_destroyed: true
+end
+
 class FlaggedModel < PlainModel
   acts_as_paranoid :flag_column => :is_deleted
 end
@@ -1239,4 +1631,30 @@ module Namespaced
     acts_as_paranoid
     belongs_to :paranoid_has_one
   end
+end
+
+class ParanoidHasThroughRestoreParent < ActiveRecord::Base
+  acts_as_paranoid
+
+  has_one :paranoid_has_one_through, dependent: :destroy
+  has_one :empty_paranoid_model, through: :paranoid_has_one_through, dependent: :destroy
+
+  has_many :paranoid_has_many_throughs, dependent: :destroy
+  has_many :empty_paranoid_models, through: :paranoid_has_many_throughs, dependent: :destroy
+end
+
+class EmptyParanoidModel < ActiveRecord::Base
+  acts_as_paranoid
+end
+
+class ParanoidHasOneThrough < ActiveRecord::Base
+  acts_as_paranoid
+  belongs_to :paranoid_has_through_restore_parent
+  belongs_to :empty_paranoid_model, dependent: :destroy
+end
+
+class ParanoidHasManyThrough < ActiveRecord::Base
+  acts_as_paranoid
+  belongs_to :paranoid_has_through_restore_parent
+  belongs_to :empty_paranoid_model, dependent: :destroy
 end
