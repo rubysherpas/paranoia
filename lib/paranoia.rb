@@ -216,23 +216,12 @@ module Paranoia
       end
 
       if association_data.nil? && association.macro.to_s == "has_one"
-        association_class_name = association.klass.name
-
-        association_foreign_key = if association.options[:through].present?
-          association.klass.primary_key
-        else
-          association.foreign_key
-        end
-
-        if association.type
-          association_polymorphic_type = association.type
-          association_find_conditions = { association_polymorphic_type => self.class.name.to_s, association_foreign_key => self.id }
-        else
-          association_find_conditions = { association_foreign_key => self.id }
-        end
-
         association_class = association.klass
         if association_class.paranoid?
+          association_foreign_key = association.options[:through].present? ? association.klass.primary_key : association.foreign_key
+          association_find_conditions = { association_foreign_key => self.id }
+          association_find_conditions[association.type] = self.class.name if association.type
+
           association_class.only_deleted.where(association_find_conditions).first
             .try!(:restore, recursive: true, :recovery_window_range => recovery_window_range)
         end
