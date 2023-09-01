@@ -60,7 +60,7 @@ module Paranoia
   def paranoia_destroy
     with_transaction_returning_status do
       result = run_callbacks(:destroy) do
-        @_disable_counter_cache = deleted?
+        @_disable_counter_cache = paranoia_destroyed?
         result = paranoia_delete
         next result unless result && ActiveRecord::VERSION::STRING >= '4.2'
         each_counter_cached_associations do |association|
@@ -73,7 +73,7 @@ module Paranoia
         @_disable_counter_cache = false
         result
       end
-      raise ActiveRecord::Rollback, "Not destroyed" unless self.deleted?
+      raise ActiveRecord::Rollback, "Not destroyed" unless paranoia_destroyed?
       result
     end || false
   end
