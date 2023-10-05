@@ -15,11 +15,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rails: ["~> 7.0.0", "~> 6.1.0", "~> 6.0.0"]
+        rails: ["~> 7.1.0", "~> 7.0.0", "~> 6.1.0", "~> 6.0.0"]
         ruby: ["3.2.2", "3.1.4", "3.0.6", "2.7.8"]
         include:
           - ruby: 3.2
             rails: 'edge'
+          - ruby: 3.2
+            rails: '~> 7.1.0'
           # single test failure with jruby
           #- ruby: jruby-9.4
           #  rails: '~> 7.0.0'
