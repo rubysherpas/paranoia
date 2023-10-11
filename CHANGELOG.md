@@ -1,5 +1,11 @@
 # paranoia Changelog
 
+## 2.6.3
+
+* [#548](https://github.com/rubysherpas/paranoia/pull/441) Add support for [Rails 7.1](https://github.com/rails/rails/releases/tag/v7.1.0) (#441)
+  
+  [Indyarocks](https://github.com/indyarocks)
+
 ## 2.6.2
 
 * [#441](https://github.com/rubysherpas/paranoia/pull/441) Recursive restore with has_many/one through assocs (#441) 
