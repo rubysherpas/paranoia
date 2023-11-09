@@ -1,0 +1,53 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+# This workflow will download a prebuilt Ruby version, install dependencies and run tests with Rake
+# For more information see: https://github.com/marketplace/actions/setup-ruby-jruby-and-truffleruby
+
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        rails: ["~> 7.1.0", "~> 7.0.0", "~> 6.1.0", "~> 6.0.0"]
+        ruby: ["3.2.2", "3.1.4", "3.0.6", "2.7.8"]
+        include:
+          - ruby: 3.2
+            rails: 'edge'
+          - ruby: 3.2
+            rails: '~> 7.1.0'
+          # single test failure with jruby
+          #- ruby: jruby-9.4
+          #  rails: '~> 7.0.0'
+          - ruby: 2.6
+            rails: '~> 6.1.0'
+          - ruby: 2.6
+            rails: '~> 6.0.0'
+          - ruby: 2.6
+            rails: '~> 5.2.0'
+          - ruby: 2.6
+            rails: '~> 5.1.0'
+          - ruby: 2.5
+            rails: '~> 6.0.0'
+          - ruby: 2.5
+            rails: '~> 5.2.0'
+          - ruby: 2.5
+            rails: '~> 5.1.0'
+        #os: ubuntu-latest
+        #arch: x64
+
+    env:
+      RAILS: ${{ matrix.rails }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby }}
+        bundler-cache: true
+    - run: bundle exec rake
