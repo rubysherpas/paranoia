@@ -1646,7 +1646,7 @@ end
 
 class ParanoidHasOneWithScope < ActiveRecord::Base
   acts_as_paranoid
-  has_one :left, -> () { where(kind: 'left') }, class_name: "ParanoidHasOneWithScope", dependent: :destroy, inverse_of: :paranoid_has_one_with_scope, foreign_key: :paranoid_has_one_with_scope_id
-  has_one :right, -> () { where(kind: 'right') }, class_name: "ParanoidHasOneWithScope", dependent: :destroy, inverse_of: :paranoid_has_one_with_scope, foreign_key: :paranoid_has_one_with_scope_id
+  has_one :left, -> () { where(kind: 'left') }, class_name: "ParanoidHasOneWithScope", dependent: :destroy
+  has_one :right, -> () { where(kind: 'right') }, class_name: "ParanoidHasOneWithScope", dependent: :destroy
   belongs_to :paranoid_has_one_with_scope
 end
