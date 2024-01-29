@@ -193,6 +193,16 @@ module Paranoia
     timestamp_attributes_for_update_in_model.each_with_object({}) { |attr,hash| hash[attr] = current_time_from_proper_timezone }
   end
 
+  def paranoia_find_has_one_target(association)
+    association_foreign_key = association.options[:through].present? ? association.klass.primary_key : association.foreign_key
+    association_find_conditions = { association_foreign_key => self.id }
+    association_find_conditions[association.type] = self.class.name if association.type
+
+    scope = association.klass.only_deleted.where(association_find_conditions)
+    scope = scope.merge(association.scope) if association.scope
+    scope.first
+  end
+
   # restore associated records that have been soft deleted when
   # we called #destroy
   def restore_associated_records(recovery_window_range = nil)
@@ -216,13 +226,8 @@ module Paranoia
       end
 
       if association_data.nil? && association.macro.to_s == "has_one"
-        association_class = association.klass
-        if association_class.paranoid?
-          association_foreign_key = association.options[:through].present? ? association.klass.primary_key : association.foreign_key
-          association_find_conditions = { association_foreign_key => self.id }
-          association_find_conditions[association.type] = self.class.name if association.type
-
-          association_class.only_deleted.where(association_find_conditions).first
+        if association.klass.paranoid?
+          paranoia_find_has_one_target(association)
             .try!(:restore, recursive: true, :recovery_window_range => recovery_window_range)
         end
       end

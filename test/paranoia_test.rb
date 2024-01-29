@@ -54,6 +54,7 @@ def setup!
     'empty_paranoid_models' => 'deleted_at DATETIME',
     'paranoid_has_one_throughs' => 'paranoid_has_through_restore_parent_id INTEGER NOT NULL, empty_paranoid_model_id INTEGER NOT NULL, deleted_at DATETIME',
     'paranoid_has_many_throughs' => 'paranoid_has_through_restore_parent_id INTEGER NOT NULL, empty_paranoid_model_id INTEGER NOT NULL, deleted_at DATETIME',
+    'paranoid_has_one_with_scopes' => 'deleted_at DATETIME, kind STRING, paranoid_has_one_with_scope_id INTEGER',
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -1223,6 +1224,21 @@ class ParanoiaTest < test_framework
     end
   end
 
+  def test_has_one_with_scope
+    # this order is important
+    parent = ParanoidHasOneWithScope.create
+    right = ParanoidHasOneWithScope.create(kind: :right, paranoid_has_one_with_scope: parent)
+    left = ParanoidHasOneWithScope.create(kind: :left, paranoid_has_one_with_scope: parent)
+
+    parent.destroy
+    assert_equal 0, ParanoidHasOneWithScope.count # all destroyed
+    parent.reload # we unload associations
+    parent.restore(recursive: true)
+
+    assert_equal "left", parent.left&.kind
+    assert_equal "right", parent.right&.kind
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
@@ -1626,4 +1642,11 @@ class ParanoidHasManyThrough < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :paranoid_has_through_restore_parent
   belongs_to :empty_paranoid_model, dependent: :destroy
+end
+
+class ParanoidHasOneWithScope < ActiveRecord::Base
+  acts_as_paranoid
+  has_one :left, -> () { where(kind: 'left') }, class_name: "ParanoidHasOneWithScope", dependent: :destroy, inverse_of: :paranoid_has_one_with_scope, foreign_key: :paranoid_has_one_with_scope_id
+  has_one :right, -> () { where(kind: 'right') }, class_name: "ParanoidHasOneWithScope", dependent: :destroy, inverse_of: :paranoid_has_one_with_scope, foreign_key: :paranoid_has_one_with_scope_id
+  belongs_to :paranoid_has_one_with_scope
 end
