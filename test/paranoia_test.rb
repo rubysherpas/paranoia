@@ -1224,19 +1224,33 @@ class ParanoiaTest < test_framework
     end
   end
 
-  def test_has_one_with_scope
+  def test_has_one_with_scope_missed
     # this order is important
     parent = ParanoidHasOneWithScope.create
-    right = ParanoidHasOneWithScope.create(kind: :right, paranoid_has_one_with_scope: parent)
-    left = ParanoidHasOneWithScope.create(kind: :left, paranoid_has_one_with_scope: parent)
+    alpha = ParanoidHasOneWithScope.create(kind: :alpha, paranoid_has_one_with_scope: parent)
+    beta = ParanoidHasOneWithScope.create(kind: :beta, paranoid_has_one_with_scope: parent)
 
     parent.destroy
     assert_equal 0, ParanoidHasOneWithScope.count # all destroyed
     parent.reload # we unload associations
     parent.restore(recursive: true)
 
-    assert_equal "left", parent.left&.kind
-    assert_equal "right", parent.right&.kind
+    assert_equal "beta", parent.beta&.kind
+    assert_equal "alpha", parent.alpha&.kind
+  end
+
+  def test_has_one_with_scope_not_destroyed
+    # this order is important
+    parent = ParanoidHasOneWithScope.create
+    gamma = ParanoidHasOneWithScope.create(kind: :gamma, paranoid_has_one_with_scope: parent)
+    parent.destroy
+    assert_equal 1, ParanoidHasOneWithScope.count # gamma not deleted
+    gamma.destroy
+    parent.reload # we unload associations
+    parent.restore(recursive: true)
+
+    assert gamma.reload.deleted?, "the record was incorrectly restored"
+    assert_equal 1, ParanoidHasOneWithScope.count # gamma deleted
   end
 
   private
@@ -1646,7 +1660,8 @@ end
 
 class ParanoidHasOneWithScope < ActiveRecord::Base
   acts_as_paranoid
-  has_one :left, -> () { where(kind: 'left') }, class_name: "ParanoidHasOneWithScope", dependent: :destroy
-  has_one :right, -> () { where(kind: 'right') }, class_name: "ParanoidHasOneWithScope", dependent: :destroy
+  has_one :alpha, -> () { where(kind: :alpha) }, class_name: "ParanoidHasOneWithScope", dependent: :destroy
+  has_one :beta, -> () { where(kind: :beta) }, class_name: "ParanoidHasOneWithScope", dependent: :destroy
+  has_one :gamma, -> () { where(kind: :gamma) }, class_name: "ParanoidHasOneWithScope"
   belongs_to :paranoid_has_one_with_scope
 end
