@@ -1225,22 +1225,24 @@ class ParanoiaTest < test_framework
   end
 
   def test_has_one_with_scope_missed
-    # this order is important
     parent = ParanoidHasOneWithScope.create
+    gamma = ParanoidHasOneWithScope.create(kind: :gamma, paranoid_has_one_with_scope: parent) # this has to be first
     alpha = ParanoidHasOneWithScope.create(kind: :alpha, paranoid_has_one_with_scope: parent)
     beta = ParanoidHasOneWithScope.create(kind: :beta, paranoid_has_one_with_scope: parent)
 
     parent.destroy
+    assert !gamma.reload.destroyed?
+    gamma.destroy
     assert_equal 0, ParanoidHasOneWithScope.count # all destroyed
     parent.reload # we unload associations
     parent.restore(recursive: true)
 
-    assert_equal "beta", parent.beta&.kind
-    assert_equal "alpha", parent.alpha&.kind
+    assert_equal "alpha", parent.alpha&.kind, "record was not restored"
+    assert_equal "beta", parent.beta&.kind, "record was not restored"
+    assert_nil parent.gamma, "record was incorrectly restored"
   end
 
-  def test_has_one_with_scope_not_destroyed
-    # this order is important
+  def test_has_one_with_scope_not_restored
     parent = ParanoidHasOneWithScope.create
     gamma = ParanoidHasOneWithScope.create(kind: :gamma, paranoid_has_one_with_scope: parent)
     parent.destroy
