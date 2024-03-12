@@ -173,8 +173,25 @@ module Paranoia
 
   private
 
+  def counter_cache_disabled?
+    defined?(@_disable_counter_cache) && @_disable_counter_cache
+  end
+
+  def counter_cached_association_names
+    return [] if counter_cache_disabled?
+    super
+  end
+
   def each_counter_cached_associations
-    !(defined?(@_disable_counter_cache) && @_disable_counter_cache) ? super : []
+    return [] if counter_cache_disabled?
+
+    if defined?(super)
+      super
+    else
+      counter_cached_association_names.each do |name|
+        yield association(name)
+      end
+    end
   end
 
   def paranoia_restore_attributes
