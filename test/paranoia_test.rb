@@ -54,6 +54,7 @@ def setup!
     'empty_paranoid_models' => 'deleted_at DATETIME',
     'paranoid_has_one_throughs' => 'paranoid_has_through_restore_parent_id INTEGER NOT NULL, empty_paranoid_model_id INTEGER NOT NULL, deleted_at DATETIME',
     'paranoid_has_many_throughs' => 'paranoid_has_through_restore_parent_id INTEGER NOT NULL, empty_paranoid_model_id INTEGER NOT NULL, deleted_at DATETIME',
+    'paranoid_has_one_with_scopes' => 'deleted_at DATETIME, kind STRING, paranoid_has_one_with_scope_id INTEGER',
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -1223,6 +1224,37 @@ class ParanoiaTest < test_framework
     end
   end
 
+  def test_has_one_with_scope_missed
+    parent = ParanoidHasOneWithScope.create
+    gamma = ParanoidHasOneWithScope.create(kind: :gamma, paranoid_has_one_with_scope: parent) # this has to be first
+    alpha = ParanoidHasOneWithScope.create(kind: :alpha, paranoid_has_one_with_scope: parent)
+    beta = ParanoidHasOneWithScope.create(kind: :beta, paranoid_has_one_with_scope: parent)
+
+    parent.destroy
+    assert !gamma.reload.destroyed?
+    gamma.destroy
+    assert_equal 0, ParanoidHasOneWithScope.count # all destroyed
+    parent.reload # we unload associations
+    parent.restore(recursive: true)
+
+    assert_equal "alpha", parent.alpha&.kind, "record was not restored"
+    assert_equal "beta", parent.beta&.kind, "record was not restored"
+    assert_nil parent.gamma, "record was incorrectly restored"
+  end
+
+  def test_has_one_with_scope_not_restored
+    parent = ParanoidHasOneWithScope.create
+    gamma = ParanoidHasOneWithScope.create(kind: :gamma, paranoid_has_one_with_scope: parent)
+    parent.destroy
+    assert_equal 1, ParanoidHasOneWithScope.count # gamma not deleted
+    gamma.destroy
+    parent.reload # we unload associations
+    parent.restore(recursive: true)
+
+    assert gamma.reload.deleted?, "the record was incorrectly restored"
+    assert_equal 1, ParanoidHasOneWithScope.count # gamma deleted
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
@@ -1626,4 +1658,12 @@ class ParanoidHasManyThrough < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :paranoid_has_through_restore_parent
   belongs_to :empty_paranoid_model, dependent: :destroy
+end
+
+class ParanoidHasOneWithScope < ActiveRecord::Base
+  acts_as_paranoid
+  has_one :alpha, -> () { where(kind: :alpha) }, class_name: "ParanoidHasOneWithScope", dependent: :destroy
+  has_one :beta, -> () { where(kind: :beta) }, class_name: "ParanoidHasOneWithScope", dependent: :destroy
+  has_one :gamma, -> () { where(kind: :gamma) }, class_name: "ParanoidHasOneWithScope"
+  belongs_to :paranoid_has_one_with_scope
 end
