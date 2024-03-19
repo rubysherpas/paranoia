@@ -24,6 +24,7 @@ module Paranoia
   module Query
     def paranoid? ; true ; end
 
+    # If you want to find all records, even those which are deleted
     def with_deleted
       if ActiveRecord::VERSION::STRING >= "4.1"
         return unscope where: paranoia_column
@@ -31,6 +32,7 @@ module Paranoia
       all.tap { |x| x.default_scoped = false }
     end
 
+    # If you want to find only the deleted records
     def only_deleted
       if paranoia_sentinel_value.nil?
         return with_deleted.where.not(paranoia_column => paranoia_sentinel_value)
@@ -45,6 +47,7 @@ module Paranoia
     end
     alias_method :deleted, :only_deleted
 
+    # If you want to restore a record
     def restore(id_or_ids, opts = {})
       ids = Array(id_or_ids).flatten
       any_object_instead_of_id = ids.any? { |id| ActiveRecord::Base === id }
