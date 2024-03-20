@@ -153,8 +153,7 @@ module Paranoia
         end
         if dependent_reflections.any?
           dependent_reflections.each do |name, reflection|
-            association_data = self.send(name)
-            # has_one association can return nil
+            association_data = self.send(name) || get_soft_deleted_has_one(reflection)
             # .paranoid? will work for both instances and classes
             next unless association_data && association_data.paranoid?
             if reflection.collection?
@@ -228,17 +227,16 @@ module Paranoia
     end
 
     destroyed_associations.each do |association|
-      association_data = send(association.name)
+      association_data = send(association.name) || get_soft_deleted_has_one(association)
 
-      unless association_data.nil?
-        if association_data.paranoid?
-          if association.collection?
-            association_data.only_deleted.each do |record|
-              record.restore(:recursive => true, :recovery_window_range => recovery_window_range)
-            end
-          else
-            association_data.restore(:recursive => true, :recovery_window_range => recovery_window_range)
+      if association_data && association_data.paranoid?
+        restore_options = { :recursive => true, :recovery_window_range => recovery_window_range }
+        if association.collection?
+          association_data.only_deleted.each do |record|
+            record.restore(restore_options)
           end
+        else
+          association_data.restore(restore_options)
         end
       end
 
@@ -256,6 +254,20 @@ module Paranoia
     else
       clear_association_cache if destroyed_associations.present?
     end
+  end
+
+  # For soft deleted objects, has_one associations will return nil if the
+  # associated object is also soft deleted. Because of this, we have to do the
+  # object look-up explicitly. This method takes an association, and if it is
+  # a has_one and the object referenced by the assocation uses paranoia, it
+  # returns the object referenced by the association. Otherwise, it returns nil.
+  def get_soft_deleted_has_one(association)
+    return nil unless association.macro.to_s == "has_one"
+
+    association_find_conditions = { association.foreign_key => self.id }
+    association_find_conditions[association.type] = self.class.name if association.type
+
+    association.klass.only_deleted.find_by(association_find_conditions) if association.klass.paranoid?
   end
 end
 
