@@ -94,7 +94,7 @@ module Paranoia
       # if a transaction exists, add the record so that after_commit
       # callbacks can be run
       add_to_transaction
-      update_columns(paranoia_destroy_attributes)
+      paranoia_update_columns(paranoia_destroy_attributes)
     elsif !frozen?
       assign_attributes(paranoia_destroy_attributes)
     end
@@ -112,7 +112,8 @@ module Paranoia
         if within_recovery_window?(recovery_window_range) && ((noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen)
           @_disable_counter_cache = !paranoia_destroyed?
           write_attribute paranoia_column, paranoia_sentinel_value
-          update_columns(paranoia_restore_attributes)
+          paranoia_update_columns(paranoia_restore_attributes)
+          touch
           each_counter_cached_associations do |association|
             if send(association.reflection.name)
               association.increment_counters
@@ -143,6 +144,14 @@ module Paranoia
     paranoia_column_value != paranoia_sentinel_value
   end
   alias :deleted? :paranoia_destroyed?
+
+  def paranoia_update_columns(attributes)
+    attributes.keys.each do |key|
+      send("#{key}_will_change!")
+    end
+    update_columns(attributes)
+    changes_applied
+  end
 
   def really_destroy!(update_destroy_attributes: true)
     with_transaction_returning_status do
