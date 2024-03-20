@@ -57,6 +57,46 @@ module Paranoia
     end
   end
 
+  def paranoia_update(attributes)
+    attributes = attributes.with_indifferent_access
+    object_class = self.class
+
+    has_many_through_associations = object_class.reflect_on_all_associations.select do |association|
+      association.is_a?(ActiveRecord::Reflection::ThroughReflection)
+    end
+
+    transaction do
+      run_callbacks(:update) do
+        has_many_through_associations.each do |association|
+          association_key =
+            "#{object_class.reflect_on_association(association.name).foreign_key.pluralize}"
+          link_table_class = association.through_reflection.klass
+          next if !attributes.key?(association_key) || !link_table_class.paranoid?
+
+          association_id_array = attributes[association_key].reject(&:blank?)
+          link_table_plural_name = association.through_reflection.plural_name.to_sym
+          object_key = "#{object_class.reflect_on_association(link_table_plural_name).foreign_key}"
+          object_primary_key = association.active_record.primary_key.to_sym
+
+          link_table_objects_to_be_soft_deleted =
+            link_table_class
+              .where(object_key => public_send(object_primary_key))
+              .where.not(association_key.singularize => association_id_array)
+          link_table_objects_to_be_soft_deleted.map(&:paranoia_destroy)
+        end
+
+        self.attributes = attributes
+        self.save
+      end
+    end
+  end
+  alias_method :update, :paranoia_update
+
+  def paranoia_update!(attributes)
+    paranoia_update(attributes) ||
+      raise(ActiveRecord::RecordNotDestroyed.new("Failed to update the record", self))
+  end
+
   def paranoia_destroy
     with_transaction_returning_status do
       result = run_callbacks(:destroy) do
