@@ -182,6 +182,9 @@ module Paranoia
             association_data = self.send(name)
             # has_one association can return nil
             # .paranoid? will work for both instances and classes
+            if association_data.nil? && reflection.has_one? && reflection.klass.paranoid?
+              association_data = reflection.klass.only_deleted.find_by(reflection.foreign_key => self.id)
+            end
             next unless association_data && association_data.paranoid?
             if reflection.collection?
               next association_data.with_deleted.find_each { |record|
