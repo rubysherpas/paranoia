@@ -1,3 +1,4 @@
+require 'logger' # required for test suite to pass on rails versions earlier than 7.1. https://stackoverflow.com/questions/79360526
 require 'bundler/setup'
 require 'active_record'
 require 'minitest/autorun'
