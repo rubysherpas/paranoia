@@ -24,7 +24,7 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = '>= 2.7'
 
-  s.add_dependency 'activerecord', '>= 6', '< 8.1'
+  s.add_dependency 'activerecord', '>= 6', '< 8.2'
 
   s.add_development_dependency "bundler", ">= 1.0.0"
   s.add_development_dependency "rake"
