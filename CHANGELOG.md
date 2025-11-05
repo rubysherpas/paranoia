@@ -1,5 +1,11 @@
 # paranoia Changelog
 
+## 3.0.2 - November 5, 2025
+
+- [#580](https://github.com/rubysherpas/paranoia/issues/580) Support Rails 8.0 and 8.1
+- Update activerecord dependency to `'>= 6', '< 8.2'`
+- Add Rails 8.0 and 8.1 to CI test matrix
+
 ## 3.0.1 - January 19, 2025
 
 - [#566](https://github.com/rubysherpas/paranoia/pull/566) Handle #delete_all
