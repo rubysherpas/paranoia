@@ -1,9 +1,12 @@
 source 'https://rubygems.org'
 
+rails = ENV['RAILS'] || '~> 7.0.0'
 sqlite = ENV['SQLITE_VERSION']
 
 if sqlite
   gem 'sqlite3', sqlite, platforms: [:ruby]
+elsif rails.start_with?('~> 8')
+  gem 'sqlite3', '~> 2.1', platforms: [:ruby]
 else
   gem 'sqlite3', '~> 1.4', platforms: [:ruby]
 end
@@ -19,8 +22,6 @@ if RUBY_ENGINE == 'rbx'
     gem 'rubysl-test-unit'
   end
 end
-
-rails = ENV['RAILS'] || '~> 6.0.4'
 
 if rails == 'edge'
   gem 'rails', github: 'rails/rails'
