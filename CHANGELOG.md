@@ -1,6 +1,6 @@
 # paranoia Changelog
 
-## 3.0.2 - November 5, 2025
+## 3.1.0 - November 7, 2025
 
 - [#580](https://github.com/rubysherpas/paranoia/issues/580) Support Rails 8.0 and 8.1
 - Update activerecord dependency to `'>= 7', '< 8.2'`
