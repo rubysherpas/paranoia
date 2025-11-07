@@ -64,6 +64,21 @@ module Paranoia
     def timestamp_attributes_with_current_time
       timestamp_attributes_for_update_in_model.each_with_object({}) { |attr,hash| hash[attr] = current_time_from_proper_timezone }
     end
+
+    def upsert_all(attributes, returning: nil, unique_by: nil)
+      return super unless ActiveRecord::VERSION::STRING >= "7.0"
+
+      insert_all = ActiveRecord::InsertAll.new(
+        self,
+        attributes,
+        on_duplicate: :update,
+        returning: returning,
+        unique_by: unique_by
+      )
+      insert_all.keys_including_timestamps.delete paranoia_column
+      insert_all.updatable_columns.delete paranoia_column
+      insert_all.execute
+    end
   end
 
   def paranoia_destroy
@@ -386,6 +401,17 @@ ActiveSupport.on_load(:active_record) do
 
     def deletion_time
       paranoia_column_value.acts_like?(:time) ? paranoia_column_value : deleted_at
+    end
+  end
+
+  class ActiveRecord::InsertAll
+    private
+    if ActiveRecord::VERSION::STRING >= "7.0"
+      def verify_attributes(attributes)
+        if keys_including_timestamps != attributes.keys.excluding(model.paranoia_column).to_set
+          raise ArgumentError, "All objects being inserted must have the same keys"
+        end
+      end
     end
   end
 end

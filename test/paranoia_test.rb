@@ -1419,6 +1419,24 @@ class ParanoiaTest < test_framework
     assert_equal 2, employer.jobs.with_deleted.count
   end
 
+  def test_upsert_all_on_soft_deleted_record
+    e1 = Employer.create(name: "e1")
+    e2 = Employer.create(name: "e2", deleted_at: Time.current)
+    assert_nil e1.deleted_at
+    assert e2.deleted_at != nil
+    
+    Employer.upsert_all([
+      { id: e1.id, name: "new_e1" },
+      { id: e2.id, name: "new_e2" }
+    ])
+
+    assert e1.reload.name == "new_e1"
+    assert e2.reload.name == "new_e2"
+
+    assert_nil e1.reload.deleted_at
+    assert e2.reload.deleted_at != nil
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
