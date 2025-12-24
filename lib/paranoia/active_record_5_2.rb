@@ -1,6 +1,7 @@
 module HandleParanoiaDestroyedInBelongsToAssociation
   def handle_dependency
     return unless load_target
+    return unless options[:dependent]
 
     case options[:dependent]
     when :destroy
@@ -18,6 +19,8 @@ end
 
 module HandleParanoiaDestroyedInHasOneAssociation
   def delete(method = options[:dependent])
+    return unless options[:dependent]
+    
     if load_target
       case method
       when :delete
