@@ -110,7 +110,7 @@ _Tagged as 3.0 as Ruby + Rails version constraints have been modernised._
 
 ## 2.4.1
 
-* [#435](https://github.com/rubysherpas/paranoia/pull/435) Monkeypatch activerecord relations to work with rails 5.2.0
+* [#435](https://github.com/rubysherpas/paranoia/pull/435) Monkeypatch activerecord relations to work with rails 6.2.0
 
   [Bartosz Bonisławski (@bbonislawski)](https://github.com/bbonislawski)
 
