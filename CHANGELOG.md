@@ -1,5 +1,9 @@
 # paranoia Changelog
 
+## 3.1.1 - July 14, 2026
+
+- [#574](https://github.com/rubysherpas/paranoia/issues/574) Fix really_destroy used against a has_one relationship that is soft deleted
+
 ## 3.1.0 - November 7, 2025
 
 - [#580](https://github.com/rubysherpas/paranoia/issues/580) Support Rails 8.0 and 8.1
