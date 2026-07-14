@@ -1419,6 +1419,30 @@ class ParanoiaTest < test_framework
     assert_equal 2, employer.jobs.with_deleted.count
   end
 
+  def test_really_destroy_against_soft_deleted_object_with_has_one_association
+    model = ParanoidModelWithHasOne.create(paranoid_model_with_belong: ParanoidModelWithBelong.create)
+    assert_equal 1, ParanoidModelWithBelong.with_deleted.count
+    model.destroy
+    assert_equal 1, ParanoidModelWithBelong.with_deleted.count
+    model.reload
+    model.really_destroy!
+    assert_equal 0, ParanoidModelWithBelong.with_deleted.count
+  end
+
+  def test_really_destroy_against_soft_deleted_object_with_polymorphic_has_one_association
+    unrelated_model = PolymorphicModel.create(parent_id: 1, parent_type: 'AModel')
+    model = ParentModel.create(id: 1, polymorphic_model: PolymorphicModel.create)
+    unrelated_model.destroy # means that later on in the test, there will be 2 deleted polymorphic models with parent_id of 1
+    
+    assert_equal 2, PolymorphicModel.with_deleted.count
+    model.destroy
+    assert_equal 2, PolymorphicModel.with_deleted.count
+    model.reload
+    model.really_destroy!
+    assert_equal 1, PolymorphicModel.with_deleted.count
+    assert_equal 'AModel', PolymorphicModel.with_deleted.first.parent_type
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
