@@ -60,6 +60,7 @@ def setup!
     'paranoid_has_one_throughs' => 'paranoid_has_through_restore_parent_id INTEGER NOT NULL, empty_paranoid_model_id INTEGER NOT NULL, deleted_at DATETIME',
     'paranoid_has_many_throughs' => 'paranoid_has_through_restore_parent_id INTEGER NOT NULL, empty_paranoid_model_id INTEGER NOT NULL, deleted_at DATETIME',
     'paranoid_has_one_with_scopes' => 'deleted_at DATETIME, kind STRING, paranoid_has_one_with_scope_id INTEGER',
+    'unscope_own_table_models' => 'deleted_at DATETIME',
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -1419,9 +1420,87 @@ class ParanoiaTest < test_framework
     assert_equal 2, employer.jobs.with_deleted.count
   end
 
+  def test_with_deleted_only_unscopes_its_own_table_when_unscope_own_table_is_enabled
+    employer = Employer.create
+    kept_employee = Employee.create
+    deleted_employee = Employee.create
+    employee_of_deleted_job = Employee.create
+
+    Job.create :employer => employer, :employee => kept_employee
+    Job.create :employer => employer, :employee => deleted_employee
+    deleted_job = Job.create :employer => employer, :employee => employee_of_deleted_job
+
+    deleted_employee.destroy
+    deleted_job.destroy
+
+    assert_equal [kept_employee.id], employer.employees.pluck(:id).sort
+
+    # Disabled by default, so the paranoia scope of jobs is lifted as well and the
+    # employee behind the deleted job is returned too.
+    assert_equal [kept_employee.id, deleted_employee.id, employee_of_deleted_job.id].sort,
+                 employer.employees.with_deleted.pluck(:id).sort
+
+    with_unscope_own_table(Employee) do
+      assert_equal [kept_employee.id, deleted_employee.id].sort,
+                   employer.employees.with_deleted.pluck(:id).sort
+    end
+  end
+
+  def test_only_deleted_only_unscopes_its_own_table_when_unscope_own_table_is_enabled
+    employer = Employer.create
+    kept_employee = Employee.create
+    deleted_employee = Employee.create
+    deleted_employee_of_deleted_job = Employee.create
+
+    Job.create :employer => employer, :employee => kept_employee
+    Job.create :employer => employer, :employee => deleted_employee
+    deleted_job = Job.create :employer => employer, :employee => deleted_employee_of_deleted_job
+
+    deleted_employee.destroy
+    deleted_employee_of_deleted_job.destroy
+    deleted_job.destroy
+
+    assert_equal [deleted_employee.id, deleted_employee_of_deleted_job.id].sort,
+                 employer.employees.only_deleted.pluck(:id).sort
+
+    with_unscope_own_table(Employee) do
+      assert_equal [deleted_employee.id], employer.employees.only_deleted.pluck(:id).sort
+    end
+  end
+
+  def test_really_destroy_reaches_records_behind_a_soft_deleted_join_model
+    employer = Employer.create
+    employee = Employee.create
+    Job.create(:employer => employer, :employee => employee).destroy
+
+    with_unscope_own_table(Employee) do
+      employer.really_destroy!
+    end
+
+    # `really_destroy!` must not leave the employee behind, no matter how
+    # `with_deleted` is configured.
+    assert_equal 0, Employee.unscoped.where(id: employee.id).count
+  end
+
+  def test_unscope_own_table_disabled_by_default
+    assert_nil ParanoidModel.paranoia_unscope_own_table
+  end
+
+  def test_unscope_own_table_can_be_enabled_per_model
+    assert UnscopeOwnTableModel.paranoia_unscope_own_table
+  end
+
   private
   def get_featureful_model
     FeaturefulModel.new(:name => "not empty")
+  end
+
+  def with_unscope_own_table(klass)
+    previous = klass.paranoia_unscope_own_table
+    klass.paranoia_unscope_own_table = true
+    yield
+  ensure
+    klass.paranoia_unscope_own_table = previous
   end
 end
 
@@ -1872,4 +1951,8 @@ class ParanoidHasOneWithScope < ActiveRecord::Base
   has_one :beta, -> () { where(kind: :beta) }, class_name: "ParanoidHasOneWithScope", dependent: :destroy
   has_one :gamma, -> () { where(kind: :gamma) }, class_name: "ParanoidHasOneWithScope"
   belongs_to :paranoid_has_one_with_scope
+end
+
+class UnscopeOwnTableModel < ActiveRecord::Base
+  acts_as_paranoid unscope_own_table: true
 end

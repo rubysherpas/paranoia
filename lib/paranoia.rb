@@ -10,7 +10,8 @@ module Paranoia
   class << self
     # Change default values in a rails initializer
     attr_accessor :default_sentinel_value,
-                  :delete_all_enabled
+                  :delete_all_enabled,
+                  :unscope_own_table
   end
 
   def self.included(klazz)
@@ -23,6 +24,10 @@ module Paranoia
     # If you want to find all records, even those which are deleted
     def with_deleted
       if ActiveRecord::VERSION::STRING >= "4.1"
+        # Unscoping by column name alone drops the condition from every table of the
+        # relation, lifting the paranoia scope of the other paranoid models joined into
+        # it (e.g. the join model of a `has_many through` association) as well.
+        return unscope where: { table_name => paranoia_column } if paranoia_unscope_own_table
         return unscope where: paranoia_column
       end
       all.tap { |x| x.default_scoped = false }
@@ -184,7 +189,10 @@ module Paranoia
             # .paranoid? will work for both instances and classes
             next unless association_data && association_data.paranoid?
             if reflection.collection?
-              next association_data.with_deleted.find_each { |record|
+              # Hard deleting an association has to reach every record, including the
+              # ones behind a soft-deleted join model, so the paranoia scope is lifted
+              # for the whole relation here, whatever `unscope_own_table` is set to.
+              next association_data.unscope(where: reflection.klass.paranoia_column).find_each { |record|
                 record.really_destroy!(update_destroy_attributes: update_destroy_attributes)
               }
             end
@@ -320,11 +328,12 @@ ActiveSupport.on_load(:active_record) do
 
       include Paranoia
       class_attribute :paranoia_column, :paranoia_sentinel_value, :paranoia_after_restore_commit,
-        :delete_all_enabled
+        :paranoia_unscope_own_table, :delete_all_enabled
 
       self.paranoia_column = (options[:column] || :deleted_at).to_s
       self.paranoia_sentinel_value = options.fetch(:sentinel_value) { Paranoia.default_sentinel_value }
       self.paranoia_after_restore_commit = options.fetch(:after_restore_commit) { false }
+      self.paranoia_unscope_own_table = options.fetch(:unscope_own_table) { Paranoia.unscope_own_table }
       def self.paranoia_scope
         where(paranoia_column => paranoia_sentinel_value)
       end
