@@ -168,6 +168,10 @@ If you want to find only the deleted records:
 Client.only_deleted
 ```
 
+Note that both of them lift the soft-delete scope of *every* paranoid model in the
+relation, not only the one they are called on. See
+[unscope_own_table](#unscope_own_table) to restrict them to a single table.
+
 If you want to check if a record is soft-deleted:
 
 ``` ruby
@@ -375,6 +379,47 @@ class User < ActiveRecord::Base
   acts_as_paranoid(delete_all_enabled: true)
 end
 ```
+
+#### unscope_own_table:
+
+`with_deleted` and `only_deleted` remove the `deleted_at` condition of every table
+of the relation, not just the one of the model they are called on. With a
+`has_many through` association between paranoid models, that also returns the
+records reached through a soft-deleted join model:
+
+``` ruby
+class User < ActiveRecord::Base
+  acts_as_paranoid
+  has_many :posts
+  has_many :comments, through: :posts
+end
+
+# Returns the soft-deleted comments of the user, but also the comments that
+# belong to soft-deleted posts.
+user.comments.with_deleted
+```
+
+Enabling `unscope_own_table` restricts them to the table of the model they are
+called on. It is disabled by default, to enable it add this in your `environment`
+file
+
+``` ruby
+Paranoia.unscope_own_table = true
+```
+alternatively, you can enable/disable it for specific models as follow:
+
+``` ruby
+class Comment < ActiveRecord::Base
+  acts_as_paranoid(unscope_own_table: true)
+end
+
+# Now returns the soft-deleted comments of the user, but still only those
+# belonging to posts that are not soft-deleted.
+user.comments.with_deleted
+```
+
+The option is read from the model `with_deleted` is called on, which is `Comment`
+in the example above, not `User`.
 
 ## Acts As Paranoid Migration
 
